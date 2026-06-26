@@ -1,0 +1,634 @@
+bash
+
+cat > /mnt/user-data/outputs/SITEKFATS_FRONTEND_DOCS.md << 'EOF'
+# SitekEats Frontend — Architecture & Onboarding Document
+
+> This document covers the full frontend architecture, conventions, patterns, and decisions made during development. Any developer or AI assistant onboarding to this project must read this document in full before touching code.
+
+---
+
+## 1. Project Overview
+
+SitekEats is a multi-vendor food delivery web app with four user roles:
+- **BUYER** — customers who order food
+- **VENDOR** — restaurants/kitchens that list and manage food
+- **RIDER** — delivery personnel
+- **ADMIN / SUPPORT_STAFF / FINANCE / OPERATIONS** — internal staff
+
+**Frontend:** Next.js 16+ (App Router), TypeScript strict mode
+**Backend:** External REST API built by a separate engineer (Eng. Aubin SIAHA)
+**Auth:** Bearer token (JWT) stored in cookies, fetched from `/auth/*` endpoints
+
+---
+
+## 2. Stack
+
+| Purpose | Package |
+|---|---|
+| Framework | `next` (v16+) |
+| Language | `typescript` (strict) |
+| Styling | `tailwindcss` v4 |
+| Server state | `@tanstack/react-query` v5 |
+| Client state | `zustand` (cart, notifications, etc.) |
+| Forms | `react-hook-form` + `zod` + `@hookform/resolvers` |
+| HTTP | `axios` (custom instance) |
+| Real-time | `socket.io-client` |
+| Headless UI | `@radix-ui/*` |
+| Tables | `@tanstack/react-table` |
+| Charts | `recharts` |
+| Animation | `framer-motion` |
+| Token decode | `jwt-decode` |
+| Cookie access | `js-cookie` |
+| Date handling | `date-fns` |
+| Class merging | `clsx` + `tailwind-merge` |
+| Icons | `lucide-react` |
+| Toasts | `sonner` |
+
+---
+
+## 3. Project Structure
+
+```
+src/
+├── app/                          # Next.js App Router pages
+│   ├── auth/                     # Global auth pages (not role-specific)
+│   │   ├── forgot/page.tsx       # Forgot password
+│   │   ├── reset/page.tsx        # Reset password (reads ?token= from URL)
+│   │   └── reset-success/page.tsx # Post-reset role selector
+│   ├── buyer/
+│   │   ├── login/page.tsx
+│   │   ├── signup/page.tsx       # Multi-step OTP signup flow
+│   │   └── account/              # Protected buyer account section
+│   │       ├── layout.tsx
+│   │       ├── page.tsx          # Redirects to /profile
+│   │       ├── profile/page.tsx
+│   │       ├── orders/page.tsx
+│   │       ├── orders/[id]/page.tsx
+│   │       ├── addresses/page.tsx
+│   │       └── settings/page.tsx
+│   ├── vendor/
+│   │   ├── login/page.tsx
+│   │   ├── signup/page.tsx
+│   │   └── dashboard/...
+│   ├── rider/
+│   │   ├── login/page.tsx
+│   │   ├── signup/page.tsx
+│   │   └── dashboard/...
+│   └── admin/
+│       ├── login/page.tsx
+│       └── dashboard/...
+│
+├── features/                     # Feature-based modules (core of the app)
+│   ├── Auth/
+│   │   ├── components/           # All auth UI components
+│   │   ├── hooks/                # useAuthMutation, useProfileQuery
+│   │   ├── services/             # fetchEngine.ts, serverActions.ts
+│   │   └── types.ts              # All auth-related TypeScript types
+│   ├── Buyer/
+│   │   └── components/
+│   │       └── account/          # BuyerAccountSidebar, MobileNav, etc.
+│   ├── Vendor/
+│   ├── Rider/
+│   ├── Admin/
+│   ├── Orders/
+│   ├── Menu/
+│   ├── Cart/
+│   └── Notifications/
+│
+├── components/                   # Shared UI primitives only
+│   ├── ui/                       # Button, Input, Modal, Badge, etc.
+│   ├── layout/                   # Global navbar, page wrappers
+│   └── shared/                   # Cross-feature components (MapView, etc.)
+│
+├── lib/
+│   ├── api.ts                    # Axios instance + interceptors
+│   ├── endpoints.ts              # All API route strings (as const)
+│   ├── token.ts                  # JWT decode utility
+│   └── utils.ts                  # General utilities
+│
+├── hooks/                        # Truly global hooks only
+├── store/                        # Zustand stores
+├── providers/
+│   ├── index.tsx                 # Root provider wrapper
+│   ├── queryProvider.tsx         # TanStack Query client
+│   └── toastProvider.tsx         # Sonner toast config
+├── types/
+│   └── env.d.ts                  # NEXT_PUBLIC_* env type declarations
+└── proxy.ts                      # Next.js 16 route protection (replaces middleware.ts)
+```
+
+---
+
+## 4. Routing Conventions
+
+### Route groups
+- `(auth)` → **removed**. Auth pages now live directly under role folders: `/buyer/login`, `/vendor/login`, etc.
+- Global auth pages (forgot, reset) live under `/auth/` — not role-specific
+- Account pages live under `/buyer/account/`, `/vendor/dashboard/`, etc.
+
+### Role-based routing
+Each role has its own folder under `app/`:
+```
+/buyer/*        → BUYER pages
+/vendor/*       → VENDOR pages
+/rider/*        → RIDER pages
+/admin/*        → ADMIN pages
+/auth/*         → Global auth (forgot, reset, reset-success)
+```
+
+### `proxy.ts` (Next.js 16 middleware replacement)
+- File: `src/proxy.ts`
+- Exported function must be named `proxy` (not `middleware`)
+- Guards protected routes by checking `fb_session` and `fb_user_role` cookies
+- Current guards:
+  - `/buyer/account/*` → requires `fb_session`
+  - `/dashboard/vendor` → requires `fb_user_role === 'VENDOR'`
+  - `/dashboard/rider` → requires `fb_user_role === 'RIDER'`
+  - `/dashboard/admin` → requires `fb_user_role === 'ADMIN'`
+  - `/buyer/signup?step=complete` → requires `fb_otp_verified` cookie
+
+---
+
+## 5. API Layer
+
+### Axios instance (`src/lib/api.ts`)
+```ts
+import axios from 'axios';
+import Cookies from 'js-cookie';
+
+export const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  timeout: 12000,
+  headers: { 'Content-Type': 'application/json' },
+});
+```
+
+**Request interceptor** — reads `fb_session` cookie (regular, not HTTP-only — intentional, Axios needs it) and attaches as `Authorization: Bearer <token>`.
+
+**Response interceptor** — handles:
+- No response → "Network connectivity lost"
+- 401 → clears cookies, redirects to login if on protected route
+- 403 → redirects to `/unauthorized`
+- Extracts `data.message` from backend error body
+- `console.error` in development for all errors
+
+### Endpoints (`src/lib/endpoints.ts`)
+```ts
+export const API_ROUTES = {
+  health: '/',
+  auth: {
+    otpRequest: '/auth/otp/request',
+    otpVerify: '/auth/otp/verify',
+    signup: '/auth/signup',
+    signin: '/auth/signin',
+    profile: '/auth/profile',
+    logout: '/auth/logout',
+    changePassword: '/auth/change-password',
+    changeEmail: '/auth/change-email',
+    forgotPassword: '/auth/forgot-password',
+    resetPassword: '/auth/reset-password',
+  },
+} as const;
+```
+
+Always add new endpoints here. Never hardcode URL strings in components or fetch functions.
+
+### Feature fetch engines
+Each feature has its own `fetchEngine.ts` inside `features/[Feature]/services/`:
+```ts
+// Pattern
+export const authFetchEngine = {
+  methodName: async (payload: PayloadType): Promise<ReturnType> => {
+    const response = await api.post<ReturnType>(API_ROUTES.auth.endpoint, payload);
+    return response.data;
+  },
+};
+```
+
+Rules:
+- Every function is fully typed — input payload and return type
+- No logic in fetch engine — just HTTP calls
+- No toast, no redirect, no side effects here
+
+---
+
+## 6. Auth System
+
+### Token flow
+1. User signs in or signs up
+2. Backend returns `{ access_token, refresh_token }`
+3. `commitSessionAction` (server action) stores both in cookies
+4. Axios reads `fb_session` on every request and attaches as Bearer token
+5. `useProfileQuery` fetches `/auth/profile` to get user data
+
+### Cookies
+
+| Cookie | Value | HTTP-only | Set by |
+|---|---|---|---|
+| `fb_session` | `access_token` | **No** | `commitSessionAction` |
+| `fb_refresh_token` | `refresh_token` | **Yes** | `commitSessionAction` |
+| `fb_user_role` | decoded role string | **Yes** | `setUserRoleAction` |
+| `fb_otp_verified` | contact string | **Yes** | `commitOtpVerifiedAction` |
+
+**Why `fb_session` is NOT HTTP-only:** Axios interceptor runs client-side and needs to read the token to attach it as a Bearer header. HTTP-only cookies cannot be read by JavaScript.
+
+**Why `fb_user_role` IS HTTP-only:** Only `proxy.ts` needs it (server-side edge). JS never needs the role directly — role comes from `useProfileQuery`.
+
+### Server actions (`src/features/Auth/services/serverActions.ts`)
+```ts
+commitSessionAction(data: TokenResponseData)   // stores access + refresh tokens
+destroySessionAction()                          // clears all auth cookies
+setUserRoleAction(role: string)                 // stores decoded role
+commitOtpVerifiedAction(contact: string)        // stores OTP verified signal (10min TTL)
+checkOtpVerifiedAction(): Promise<boolean>      // checks if OTP verified cookie exists
+```
+
+### Token decode (`src/lib/token.ts`)
+```ts
+import { jwtDecode } from 'jwt-decode';
+
+interface TokenPayload {
+  role: string;
+  sub: string;
+  exp: number;
+}
+
+export function getRoleFromToken(token: string): string | null {
+  try {
+    return jwtDecode<TokenPayload>(token)?.role ?? null;
+  } catch {
+    return null;
+  }
+}
+```
+
+Used immediately after login/signup to decode role and call `setUserRoleAction`.
+
+---
+
+## 7. Auth Types (`src/features/Auth/types.ts`)
+
+```ts
+export enum UserRole {
+  BUYER = 'BUYER',
+  VENDOR = 'VENDOR',
+  RIDER = 'RIDER',
+  ADMIN = 'ADMIN',
+  SUPPORT_STAFF = 'SUPPORT_STAFF',
+  FINANCE = 'FINANCE',
+  OPERATIONS = 'OPERATIONS',
+}
+
+export interface UserProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  email?: string;
+  role: UserRole;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  createdAt: string;
+}
+
+export interface TokenResponseData {
+  access_token: string;
+  refresh_token: string;
+}
+
+// Login and signup both return TokenResponseData only — no user object
+// User is always fetched separately via GET /auth/profile
+
+export interface OtpRequestPayload { phone?: string; email?: string; }
+export interface OtpVerifyPayload { phone?: string; email?: string; otp: string; }
+export interface SignUpPayload {
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  email?: string;
+  role: UserRole;
+  password: string;
+}
+export interface SignInPayload { phone?: string; email?: string; password: string; }
+export interface ChangePasswordPayload { oldPassword: string; newPassword: string; }
+export interface ChangeEmailPayload { newEmail: string; }
+export interface ForgotPasswordPayload { phone?: string; email?: string; }
+export interface ResetPasswordPayload { token: string; newPassword: string; }
+```
+
+---
+
+## 8. TanStack Query Patterns
+
+### No auth context needed
+`useProfileQuery` is the global user state. Any component calls it and gets cached data. TanStack Query cache replaces context for server data.
+
+### `useProfileQuery`
+```ts
+// src/features/Auth/hooks/useProfileQuery.ts
+const profileQuery = useQuery<UserProfile, AxiosError>({
+  queryKey: ['user-profile'],
+  queryFn: authFetchEngine.fetchCurrentProfile,
+  enabled: hasToken && isNotOnboarding,  // only runs when logged in
+  staleTime: 1000 * 60 * 10,            // 10 minutes
+  gcTime: 1000 * 60 * 60,              // 1 hour
+  retry: (count, error) => {
+    if (error.response?.status === 401 || error.response?.status === 404) return false;
+    return count < 2;
+  },
+  refetchOnWindowFocus: true,
+});
+```
+
+### `useAuthMutation`
+Single hook for all auth mutations. Returns both `mutate` and `mutateAsync` for mutations that need sequential async handling.
+
+**Pattern — redirect stays OUT of mutations:**
+```ts
+// WRONG — mutation handles redirect
+onSuccess: (data) => router.replace('/buyer/account');
+
+// CORRECT — form handles redirect via callback
+// In mutation:
+onSuccess: () => toast.success('Done');
+
+// In form:
+mutation(payload, { onSuccess: () => router.replace('/buyer/account') });
+```
+
+**Exception:** `signInMutation` redirects in `onSuccess` because role-based redirect logic belongs there (decodes token, gets role, redirects accordingly).
+
+### Query invalidation pattern
+```ts
+// After mutation that changes user data
+queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+
+// After profile update (optimistic — skip refetch)
+queryClient.setQueryData(['user-profile'], updatedData);
+```
+
+### Feature query pattern
+Every feature has its own hooks folder:
+```ts
+// features/Orders/hooks/useOrdersQuery.ts
+export function useOrdersQuery() {
+  return useQuery({
+    queryKey: ['orders'],
+    queryFn: ordersFetchEngine.fetchOrders,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+```
+
+---
+
+## 9. Form Patterns
+
+All forms use `react-hook-form` + `zod`:
+
+```ts
+const schema = z.object({
+  email: z.string().min(1, 'Required').email('Invalid email'),
+});
+type FormValues = z.infer<typeof schema>;
+
+const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  resolver: zodResolver(schema),
+});
+```
+
+**Input class utility (repeated per file, not global):**
+```ts
+const inputCls = (err?: boolean) =>
+  `w-full px-4 py-3 bg-white border text-sm text-zinc-900 placeholder:text-zinc-400
+   outline-none transition-colors duration-150
+   ${err ? 'border-red-400 focus:border-red-400' : 'border-zinc-300 focus:border-amber-500'}`;
+```
+
+**Error display:** inline below the input, never toasted for form validation errors. Toasts are for API errors only.
+
+---
+
+## 10. Design System
+
+### Core rules (non-negotiable)
+- **Zero border-radius** — no `rounded-*` anywhere. Sharp corners on everything.
+- **No glassmorphism** — no `backdrop-blur`, no frosted glass effects
+- **No gradient decorations** — buttons, cards, backgrounds are flat
+- **No hover scale transforms** — no `hover:scale-*`
+- **No excessive shadows** — `shadow-sm` maximum if ever needed
+- **Errors are toasted** — API errors go to Sonner toasts, not inline banners (except auth forms which show inline validation)
+
+### Color usage
+| Color | Usage |
+|---|---|
+| `amber-500` | Primary CTA buttons, active states, accents |
+| `amber-50` | Active nav backgrounds, subtle highlights |
+| `amber-600` | Text links, hover states on amber elements |
+| `zinc-900` | Primary text, secondary toggle active state |
+| `zinc-500/400` | Secondary text, labels |
+| `zinc-200/100` | Borders, dividers, skeleton backgrounds |
+| `stone-50` | Page backgrounds |
+| `red-500` | Destructive actions (logout confirm button) |
+| `red-400` | Error input borders |
+
+**Amber appears in exactly 3 places per layout:**
+1. Active/focused input border
+2. Primary CTA button
+3. Active nav item indicator
+
+### Typography
+- Labels: `text-xs font-semibold uppercase tracking-widest text-zinc-500`
+- Page titles: `text-xl/2xl font-black uppercase tracking-tight text-zinc-900`
+- Body: `text-sm font-medium text-zinc-600`
+- Errors: `text-xs text-red-500 font-medium`
+
+### Animation (Framer Motion)
+Used only for step transitions in multi-step forms:
+```ts
+const variants = {
+  enter: (dir: number) => ({ x: dir > 0 ? 40 : -40, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir > 0 ? -40 : 40, opacity: 0 }),
+};
+// duration: 0.22, ease: 'easeInOut'
+// AnimatePresence mode="wait"
+```
+
+No animation on hover, no spring animations, no layout animations. Keep it subtle.
+
+---
+
+## 11. Buyer Auth Flow
+
+### Login
+```
+/buyer/login → SignInForm (email or phone + password) → commitSessionAction → decode token → setUserRoleAction → router.replace based on role
+```
+
+### Signup (multi-step, single page)
+```
+/buyer/signup?step=request  → OtpRequestForm → POST /auth/otp/request
+/buyer/signup?step=verify   → OtpVerifyForm → POST /auth/otp/verify → commitOtpVerifiedAction
+/buyer/signup?step=complete → SignUpDetailsForm (guarded by fb_otp_verified cookie) → POST /auth/signup → commitSessionAction → router.replace('/buyer/account/profile')
+```
+
+Step routing: URL param `?step=` drives which form renders. On refresh, correct form shows. Animation slides left (forward) or right (back).
+
+### Forgot / Reset password
+```
+/auth/forgot → ForgotPasswordForm → POST /auth/forgot-password → shows "link sent" success state
+Email/SMS contains link: /auth/reset?token=xyz
+/auth/reset → reads token from URL → ResetPasswordForm → POST /auth/reset-password → router.replace('/auth/reset-success')
+/auth/reset-success → static page with 3 role login buttons
+```
+
+### OTP flow details
+- OTP is only for **new user signup** — not for login
+- Returning users always use email/password signin
+- `fb_otp_verified` cookie: HTTP-only, 10 minute TTL, set after successful OTP verify, deleted on logout
+
+---
+
+## 12. Buyer Account Structure
+
+```
+/buyer/account/layout.tsx     → BuyerAccountLayout (sidebar + mobile nav)
+/buyer/account/page.tsx       → redirect to /profile
+/buyer/account/profile        → view + inline edit name, completion bar
+/buyer/account/orders         → order history (paginated)
+/buyer/account/orders/[id]    → order detail + tracking
+/buyer/account/addresses      → saved addresses
+/buyer/account/settings       → change password, change email
+```
+
+**Layout:** Desktop = sticky left sidebar (240px) + scrollable content. Mobile = sticky top wordmark bar + fixed bottom tab nav (5 tabs including logout).
+
+**Sidebar user info:** Avatar (amber square, white initials from firstName + lastName) + full name + contact.
+
+**Profile completion:** `firstName + lastName` = 50%, `status ACTIVE` = 25%, `address` = 25%. Default = 75% (address not yet implemented). `IS_ADDRESS_SETUP` constant → swap to `true` when address feature ships.
+
+---
+
+## 13. Component Conventions
+
+### Naming
+- Feature components: `PascalCase` in `features/[Feature]/components/`
+- Shared primitives: `PascalCase` in `components/ui/`
+- Page files: `page.tsx` (Next.js convention)
+- Layout files: `layout.tsx`
+
+### Client vs Server components
+- Pages that use hooks, state, or browser APIs → `'use client'`
+- Pages that only render static content or use server data → server component (no directive)
+- Server actions → `'use server'` at top of file
+
+### `useSearchParams` rule
+Any component using `useSearchParams` must be wrapped in `<Suspense>` by its parent page:
+```tsx
+<Suspense fallback={<SkeletonUI />}>
+  <ComponentWithSearchParams />
+</Suspense>
+```
+
+### Skeleton pattern
+```tsx
+<div className="h-4 w-32 bg-zinc-100 animate-pulse" />
+```
+Match dimensions to actual content. No layout shift between skeleton and loaded state.
+
+### Error state pattern
+```tsx
+<div className="flex items-start gap-3 border border-red-200 bg-red-50 px-5 py-4">
+  <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
+  <div>
+    <p className="text-sm font-bold text-red-700">Error title</p>
+    <p className="text-xs text-red-600">Description</p>
+  </div>
+</div>
+```
+
+---
+
+## 14. Toast Conventions (Sonner)
+
+```ts
+// Success — standard duration
+toast.success('Message', { duration: 4000 });
+
+// Success — important (welcome, account created)
+toast.success('Message', { duration: 5000 });
+
+// Error — always longer so user can read
+toast.error('Title', { description: error.message, duration: 6000 });
+
+// Info
+toast.info('Message', { duration: 4000 });
+```
+
+All API `onError` handlers:
+1. `console.error` in dev: `if (dev) console.error('[mutationName]', error)`
+2. Toast the error with 6000ms duration
+
+Never toast form validation errors — those show inline below inputs.
+
+---
+
+## 15. What's Built vs What's Pending
+
+### ✅ Built
+- Full auth system (types, API layer, mutations, queries, server actions)
+- Buyer login page
+- Buyer signup (multi-step OTP flow)
+- Global forgot/reset/reset-success pages
+- Buyer account layout (sidebar + mobile nav)
+- Buyer profile page (view, inline edit, completion bar, skeleton, error state)
+- Logout confirm modal
+- `proxy.ts` route protection
+
+### 🔲 Pending
+- Buyer account: orders, addresses, settings pages
+- Vendor auth pages (login, signup) — components reusable, just new pages
+- Rider auth pages
+- Admin auth pages (login only, no signup)
+- Vendor dashboard
+- Rider dashboard
+- Admin dashboard
+- Customer home page (food browsing)
+- Cart feature
+- Checkout flow
+- Real-time order tracking (Socket.io)
+- Notifications system
+
+---
+
+## 16. Environment Variables
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3333  # Backend base URL
+```
+
+All env vars must be declared in `src/types/env.d.ts`. Access only through that typed declaration, never raw `process.env` in components.
+
+---
+
+## 17. Key Decisions Log
+
+| Decision | Reason |
+|---|---|
+| `fb_session` not HTTP-only | Axios interceptor (client-side) needs to read it for Bearer token |
+| Role stored in separate cookie | `proxy.ts` runs at edge before React, needs role without decoding JWT |
+| No auth context | TanStack Query cache replaces context for server state |
+| Redirect logic in pages not mutations | Mutations are reused across roles — redirect destination varies by role |
+| OTP only for signup, not login | Login uses email/password only. OTP is identity verification for new users |
+| Separate `TokenResponseData` type | Backend returns no user on login/signup — user always fetched via `/auth/profile` |
+| `proxy.ts` not `middleware.ts` | Next.js 16 renamed middleware to proxy |
+| Feature-based structure | Scales better than layer-based (components/hooks/pages) as features grow |
+
+---
+
+*Last updated during active development. Update this document when architectural decisions change.*
+EOF
+Output
+
+exit code 0
+Done

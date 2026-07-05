@@ -33,8 +33,12 @@ const schema = z.object({
   city: z.string().min(1, 'City is required'),
   region: z.string().min(1, 'Region is required'),
   country: z.string().default('CMR'),
-  latitude: z.number({ required_error: 'Select an address from suggestions' }),
-  longitude: z.number({ required_error: 'Select an address from suggestions' }),
+  latitude: z
+  .number()
+  .min(1, "Select an address from suggestions"),
+  longitude: z
+  .number()
+  .min(1, "Select an address from suggestions"),
   deliveryInstructions: z.string().optional(),
   isDefault: z.boolean().default(false),
 });

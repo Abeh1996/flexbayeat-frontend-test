@@ -16,20 +16,20 @@ import {
   EyeOff,
   ChevronRight,
 } from "lucide-react";
-import { useCategoriesQuery } from "@/features/Vendor/hooks/useMenuQuery";
+import { useCategoriesQuery } from "@/features/vendor/hooks/useMenuQuery";
 import {
   useCategoryMutation,
   useItemMutation,
-} from "@/features/Vendor/hooks/useMenuMutation";
-import { CategoryModal } from "@/features/Vendor/components/CategoryModal";
-import { ItemDrawer } from "@/features/Vendor/components/ItemDrawer";
+} from "@/features/vendor/hooks/useMenuMutation";
+import { CategoryModal } from "@/features/vendor/components/CategoryModal";
+import { ItemDrawer } from "@/features/vendor/components/ItemDrawer";
 import {
   MenuCategory,
   MenuItem,
   CreateCategoryPayload,
   CreateMenuItemPayload,
   MenuItemStatus,
-} from "@/features/Vendor/types/menu.types";
+} from "@/features/vendor/types/menu.types";
 
 // ── Status badge ─────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<MenuItemStatus, string> = {

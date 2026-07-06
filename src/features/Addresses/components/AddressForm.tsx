@@ -43,7 +43,7 @@ const schema = z.object({
   isDefault: z.boolean().default(false),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.input<typeof schema>;
 
 const inputCls = (err?: boolean) =>
   `w-full px-4 py-3 bg-white border text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors duration-150 ${

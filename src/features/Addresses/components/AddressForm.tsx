@@ -201,11 +201,13 @@ export function AddressForm({
       addressLine2: values.addressLine2,
       city: values.city,
       region: values.region,
-      country: values.country,
+      //country: values.country,
+      country: values.country ?? "CMR",
       latitude: values.latitude,
       longitude: values.longitude,
       deliveryInstructions: values.deliveryInstructions,
-      isDefault: values.isDefault,
+      //isDefault: values.isDefault,
+       isDefault: values.isDefault ?? false,
     });
   };
 

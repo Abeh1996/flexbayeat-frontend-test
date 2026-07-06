@@ -15,8 +15,16 @@ const VEHICLE_OPTIONS: { value: VehicleType; label: string; icon: typeof Bike }[
 ];
 
 const schema = z.object({
-  vehicleType: z.enum(['BICYCLE', 'MOTORCYCLE', 'CAR', 'VAN'], {
-    required_error: 'Select a vehicle type',
+  //vehicleType: z.enum(['BICYCLE', 'MOTORCYCLE', 'CAR', 'VAN'], {
+    //required_error: 'Select a vehicle type',
+  vehicleType: z.enum([
+  'BICYCLE',
+  'MOTORCYCLE',
+  'CAR',
+  'VAN',
+], {
+  message: 'Select a vehicle type',
+}),
   }),
   vehiclePlate: z.string().min(1, 'Vehicle plate number is required'),
   vehicleModel: z.string().min(1, 'Vehicle model is required'),

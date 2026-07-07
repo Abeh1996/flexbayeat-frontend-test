@@ -30,9 +30,12 @@ const schema = z.object({
   menuCategoryId: z.string().min(1, "Category is required"),
   name: z.string().min(1, "Item name is required"),
   description: z.string().optional(),
+  //price: z.preprocess(
+    //(val) => Number(val),
+   // z.number({ invalid_type_error: "Price is required" }).min(0),
   price: z.preprocess(
-    (val) => Number(val),
-    z.number({ invalid_type_error: "Price is required" }).min(0),
+  (val) => Number(val),
+  z.number().min(0, "Price must be at least 0"),
   ),
   stockCount: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),

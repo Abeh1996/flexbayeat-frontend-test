@@ -7,10 +7,15 @@ import { z } from 'zod';
 import { X, Loader2, Tag } from 'lucide-react';
 import { MenuCategory, CreateCategoryPayload } from '../types/menu.types';
 
+//const schema = z.object({
+ // name: z.string().min(1, 'Category name is required'),
+ // description: z.string().optional(),
+  //isActive: z.boolean().default(true),
+    //});
 const schema = z.object({
   name: z.string().min(1, 'Category name is required'),
   description: z.string().optional(),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 type FormValues = z.infer<typeof schema>;

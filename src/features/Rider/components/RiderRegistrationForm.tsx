@@ -25,7 +25,6 @@ const schema = z.object({
 ], {
   message: 'Select a vehicle type',
 }),
-  }),
   vehiclePlate: z.string().min(1, 'Vehicle plate number is required'),
   vehicleModel: z.string().min(1, 'Vehicle model is required'),
   nationalId: z

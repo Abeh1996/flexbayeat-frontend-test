@@ -33,18 +33,21 @@ const schema = z.object({
   //price: z.preprocess(
     //(val) => Number(val),
    // z.number({ invalid_type_error: "Price is required" }).min(0),
-  price: z.preprocess(
-  (val) => Number(val),
-  z.number().min(0, "Price must be at least 0"),
-  ),
-  stockCount: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
-    z.number().optional(),
-  ),
-  preparationTimeMin: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
-    z.number().optional(),
-  ),
+  //price: z.preprocess(
+ // (val) => Number(val),
+ // z.number().min(0, "Price must be at least 0"),
+  //),
+  price: z.number().min(0, "Price must be at least 0"),
+  //stockCount: z.preprocess(
+    //(val) => (val === "" ? undefined : Number(val)),
+   // z.number().optional(),
+  // ),
+  stockCount: z.number().optional(),
+  //preparationTimeMin: z.preprocess(
+   // (val) => (val === "" ? undefined : Number(val)),
+   // z.number().optional(),
+ // ),
+  preparationTimeMin: z.number().optional(),
   isSpicy: z.boolean().default(false),
   isVegetarian: z.boolean().default(false),
   status: z.enum(["AVAILABLE", "OUT_OF_STOCK", "HIDDEN"]).default("AVAILABLE"),

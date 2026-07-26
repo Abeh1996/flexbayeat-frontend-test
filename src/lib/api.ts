@@ -8,7 +8,16 @@ import axios, {
 import Cookies from 'js-cookie';
 import { API_ROUTES } from './endpoints';
 
+<<<<<<< HEAD
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://3.250.40.253:5000';
+=======
+//const API_BASE_URL = "http://3.250.40.253:5000";
+// Production: Uses the Vercel environment variable.
+// Development: Falls back to localhost if the variable is not set.
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+// ;
+>>>>>>> e8440869635834ab3d0cab01921129ed7ef99d56
 
 interface BackendErrorResponse {
   message?: string;

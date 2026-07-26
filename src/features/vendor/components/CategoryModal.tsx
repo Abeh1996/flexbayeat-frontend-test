@@ -15,6 +15,9 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+type FormInput = z.input<typeof schema>;
+type FormOutput = z.output<typeof schema>;
+
 const inputCls = (err?: boolean) =>
   `w-full px-4 py-3 bg-white border rounded-md text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
     err ? 'border-red-400 focus:border-red-400' : 'border-zinc-200 focus:border-amber-500'
@@ -39,7 +42,7 @@ export function CategoryModal({
 }: CategoryModalProps) {
   const isEditing = !!editingCategory;
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormInput, any, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: { isActive: true },
   });
@@ -59,7 +62,7 @@ export function CategoryModal({
 
   if (!isOpen) return null;
 
-  const handleFormSubmit = (values: FormValues) => {
+  const handleFormSubmit = (values: FormOutput) => {
     onSubmit({
       name: values.name,
       description: values.description,

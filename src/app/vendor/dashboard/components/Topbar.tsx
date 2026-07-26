@@ -1,9 +1,9 @@
 // src/features/Vendor/components/Topbar.tsx
-'use client';
-import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Menu, Bell, ChevronDown, LogOut, Settings, User } from 'lucide-react';
-import { useAuthMutation } from '@/features/Auth/hooks/useAuthMutation';
+"use client";
+import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Menu, Bell, ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { useAuthMutation } from "@/features/Auth/hooks/useAuthMutation";
 
 interface TopbarProps {
   businessName?: string;
@@ -12,7 +12,12 @@ interface TopbarProps {
   pageTitle: string;
 }
 
-export function Topbar({ businessName, logoUrl, onMenuClick, pageTitle }: TopbarProps) {
+export function Topbar({
+  businessName,
+  logoUrl,
+  onMenuClick,
+  pageTitle,
+}: TopbarProps) {
   const router = useRouter();
   const { logout, isLoggingOut } = useAuthMutation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,8 +29,8 @@ export function Topbar({ businessName, logoUrl, onMenuClick, pageTitle }: Topbar
         setMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   return (
@@ -64,17 +69,17 @@ export function Topbar({ businessName, logoUrl, onMenuClick, pageTitle }: Topbar
               </div>
             )}
             <span className="hidden sm:block text-sm font-semibold text-zinc-700 max-w-[140px] truncate">
-              {businessName || 'My Business'}
+              {businessName || "My Business"}
             </span>
             <ChevronDown size={14} className="text-zinc-400" />
           </button>
 
           {menuOpen && (
             <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-zinc-200 shadow-md z-50">
-                <button
+              <button
                 onClick={() => {
                   setMenuOpen(false);
-                  router.push('/vendor/dashboard/profile');
+                  router.push("/vendor/dashboard/profile");
                 }}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors text-left"
               >
@@ -84,7 +89,7 @@ export function Topbar({ businessName, logoUrl, onMenuClick, pageTitle }: Topbar
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  router.push('/vendor/dashboard/settings');
+                  router.push("/vendor/dashboard/settings");
                 }}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors text-left"
               >
@@ -94,10 +99,10 @@ export function Topbar({ businessName, logoUrl, onMenuClick, pageTitle }: Topbar
               <button
                 onClick={() => logout()}
                 disabled={isLoggingOut}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors text-left disabled:opacity-50"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors text-left disabled:opacity-40"
               >
                 <LogOut size={14} />
-                {isLoggingOut ? 'Logging out…' : 'Log out'}
+                {isLoggingOut ? "Logging out…" : "Log out"}
               </button>
             </div>
           )}

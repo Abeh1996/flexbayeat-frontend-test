@@ -18,6 +18,7 @@ export const API_ROUTES = {
     changeEmail: "/auth/change-email",
     forgotPassword: "/auth/forgot-password",
     resetPassword: "/auth/reset-password",
+    refresh: "/auth/refresh",
   },
 
   addresses: {
@@ -28,27 +29,49 @@ export const API_ROUTES = {
     delete: (id: string) => `/user/buyer/addresses/${id}`,
   },
 
-
   vendor: {
     profile: "/user/vendor/profile",
-    categories: '/vendor/category',
-  category: (id: string) => `/vendor/category/${id}`,
-  items: '/vendor/item',
-  item: (id: string) => `/vendor/item/${id}`,
-  // Orders
-  activeOrders: '/vendor/orders/active',
-  orderHistory: '/vendor/orders/history',
-  acceptOrder: (id: string) => `/vendor/order/${id}/accept`,
-  rejectOrder: (id: string) => `/vendor/order/${id}/reject`,
-  updateOrderStatus: (id: string) => `/vendor/order/${id}/status`,
-  // Analytics
-  analytics: '/vendor/analytics',
+    categories: "/vendor/category",
+    category: (id: string) => `/vendor/category/${id}`,
+    items: "/vendor/item",
+    item: (id: string) => `/vendor/item/${id}`,
+    // Orders
+    activeOrders: "/vendor/orders/active",
+    orderHistory: "/vendor/orders/history",
+    acceptOrder: (id: string) => `/vendor/order/${id}/accept`,
+    rejectOrder: (id: string) => `/vendor/order/${id}/reject`,
+    updateOrderStatus: (id: string) => `/vendor/order/${id}/status`,
+    // Analytics
+    analytics: "/vendor/analytics",
   },
 
   // Add to src/lib/endpoints.ts under API_ROUTES:
   rider: {
     profile: "/user/rider/profile",
     location: "/user/rider/location",
+  },
+
+  // Add to src/lib/endpoints.ts (inside API_ROUTES)
+  product: {
+    vendors: "/product/vendors",
+    vendorMenu: (id: string) => `/product/vendor/${id}/menu`,
+  },
+
+  // Add to src/lib/endpoints.ts (inside API_ROUTES)
+  buyer: {
+    cart: "/buyer/cart",
+    checkout: "/buyer/checkout",
+    orders: "/buyer/orders",
+    reorder: (id: string) => `/buyer/order/${id}/reorder`,
+    review: (id: string) => `/buyer/order/${id}/review`,
+  },
+
+  admin: {
+    profile: "/user/admin/profile",
+    pendingVendors: "/user/admin/pending-vendors",
+    approveVendor: (id: string) => `/user/admin/approve-vendor/${id}`,
+    pendingRiders: "/user/admin/pending-riders",
+    approveRider: (id: string) => `/user/admin/approve-rider/${id}`,
   },
 
   // buyerAddresses: {

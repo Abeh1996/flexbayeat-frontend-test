@@ -1,9 +1,9 @@
 // src/features/Vendor/components/VendorRegistrationForm.tsx
-'use client';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+"use client";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   Search,
   LocateFixed,
@@ -13,8 +13,8 @@ import {
   Upload,
   FileText,
   ImageIcon,
-} from 'lucide-react';
-import { VendorProfilePayload } from '../types';
+} from "lucide-react";
+import { VendorProfilePayload } from "../types";
 
 const GEO_KEY = process.env.NEXT_PUBLIC_GEOAPIFY_KEY;
 
@@ -34,10 +34,10 @@ interface GeoapifyFeature {
 }
 
 const schema = z.object({
-  businessName: z.string().min(1, 'Business name is required'),
+  businessName: z.string().min(1, "Business name is required"),
   description: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
   addressLine1: z.string().optional(),
   city: z.string().optional(),
   region: z.string().optional(),
@@ -45,39 +45,51 @@ const schema = z.object({
   longitude: z.number().optional(),
   logo: z
     .instanceof(File)
-    .refine((f) => f.size > 0, 'Logo is required')
-    .refine((f) => f.type.startsWith('image/'), 'Must be an image file'),
+    .refine((f) => f.size > 0, "Logo is required")
+    .refine((f) => f.type.startsWith("image/"), "Must be an image file"),
+  banner: z
+    .instanceof(File)
+    .optional()
+    .refine((f) => !f || f.type.startsWith("image/"), "Must be an image file"),
   documents: z
     .array(z.instanceof(File))
-    .min(1, 'At least one document is required'),
+    .min(1, "At least one document is required"),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 const inputCls = (err?: boolean) =>
   `w-full px-4 py-3 bg-white border text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors duration-150 ${
-    err ? 'border-red-400 focus:border-red-400' : 'border-zinc-200 focus:border-amber-500'
+    err
+      ? "border-red-400 focus:border-red-400"
+      : "border-zinc-200 focus:border-amber-500"
   }`;
-const labelCls = 'block text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-1.5';
-const errorCls = 'text-xs text-red-500 font-medium mt-1';
+const labelCls =
+  "block text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-1.5";
+const errorCls = "text-xs text-red-500 font-medium mt-1";
 
 interface VendorRegistrationFormProps {
   onSuccess: (payload: VendorProfilePayload) => void;
   isLoading: boolean;
 }
 
-export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrationFormProps) {
-  const [query, setQuery] = useState('');
+export function VendorRegistrationForm({
+  onSuccess,
+  isLoading,
+}: VendorRegistrationFormProps) {
+  const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<GeoapifyFeature[]>([]);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const docsInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -89,8 +101,8 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
     resolver: zodResolver(schema),
   });
 
-  const lat = watch('latitude');
-  const lng = watch('longitude');
+  const lat = watch("latitude");
+  const lng = watch("longitude");
 
   useEffect(() => {
     if (lat && lng) setShowMap(true);
@@ -98,17 +110,23 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target as Node)
+      ) {
         setSuggestions([]);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   // Geoapify autocomplete
   const fetchSuggestions = useCallback(async (value: string) => {
-    if (value.length < 3 || !GEO_KEY) { setSuggestions([]); return; }
+    if (value.length < 3 || !GEO_KEY) {
+      setSuggestions([]);
+      return;
+    }
     setIsFetchingSuggestions(true);
     try {
       const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(value)}&filter=countrycode:cm&limit=5&lang=en&apiKey=${GEO_KEY}`;
@@ -132,28 +150,28 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
   const handleSelectSuggestion = (feature: GeoapifyFeature) => {
     const p = feature.properties;
     const addressLine1 =
-      [p.housenumber, p.street].filter(Boolean).join(' ') ||
+      [p.housenumber, p.street].filter(Boolean).join(" ") ||
       p.name ||
       p.suburb ||
-      p.formatted.split(',')[0];
-    setValue('addressLine1', addressLine1);
-    setValue('city', p.city ?? '');
-    setValue('region', p.state ?? '');
-    setValue('latitude', p.lat);
-    setValue('longitude', p.lon);
+      p.formatted.split(",")[0];
+    setValue("addressLine1", addressLine1);
+    setValue("city", p.city ?? "");
+    setValue("region", p.state ?? "");
+    setValue("latitude", p.lat);
+    setValue("longitude", p.lon);
     setQuery(p.formatted);
     setSuggestions([]);
   };
 
   const clearSearch = () => {
-    setQuery('');
+    setQuery("");
     setSuggestions([]);
     setShowMap(false);
-    setValue('addressLine1', '');
-    setValue('city', '');
-    setValue('region', '');
-    setValue('latitude', undefined);
-    setValue('longitude', undefined);
+    setValue("addressLine1", "");
+    setValue("city", "");
+    setValue("region", "");
+    setValue("latitude", undefined);
+    setValue("longitude", undefined);
   };
 
   const handleDetect = () => {
@@ -169,18 +187,18 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
           const feature: GeoapifyFeature | undefined = data.features?.[0];
           if (feature) handleSelectSuggestion(feature);
           else {
-            setValue('latitude', detLat);
-            setValue('longitude', detLng);
+            setValue("latitude", detLat);
+            setValue("longitude", detLng);
           }
         } catch {
-          setValue('latitude', detLat);
-          setValue('longitude', detLng);
+          setValue("latitude", detLat);
+          setValue("longitude", detLng);
         } finally {
           setIsDetecting(false);
         }
       },
       () => setIsDetecting(false),
-      { timeout: 10000 }
+      { timeout: 10000 },
     );
   };
 
@@ -188,8 +206,16 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setValue('logo', file, { shouldValidate: true });
+    setValue("logo", file, { shouldValidate: true });
     setLogoPreview(URL.createObjectURL(file));
+  };
+
+  // Banner handler
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setValue("banner", file, { shouldValidate: true });
+    setBannerPreview(URL.createObjectURL(file));
   };
 
   // Documents handler
@@ -198,13 +224,13 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
     if (!files.length) return;
     const merged = [...docFiles, ...files];
     setDocFiles(merged);
-    setValue('documents', merged, { shouldValidate: true });
+    setValue("documents", merged, { shouldValidate: true });
   };
 
   const removeDoc = (index: number) => {
     const updated = docFiles.filter((_, i) => i !== index);
     setDocFiles(updated);
-    setValue('documents', updated, { shouldValidate: true });
+    setValue("documents", updated, { shouldValidate: true });
   };
 
   const onSubmit = (values: FormValues) => {
@@ -219,6 +245,7 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
       latitude: values.latitude,
       longitude: values.longitude,
       logo: values.logo,
+      banner: values.banner,
       documents: values.documents,
     });
   };
@@ -230,7 +257,6 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-
       {/* ── Business Info ── */}
       <div>
         <p className={`${labelCls} text-zinc-400 mb-3`}>Business Information</p>
@@ -240,20 +266,24 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
               Business Name <span className="text-red-400">*</span>
             </label>
             <input
-              {...register('businessName')}
+              {...register("businessName")}
               placeholder="e.g. Mama Ngozi Kitchen"
               className={inputCls(!!errors.businessName)}
             />
-            {errors.businessName && <p className={errorCls}>{errors.businessName.message}</p>}
+            {errors.businessName && (
+              <p className={errorCls}>{errors.businessName.message}</p>
+            )}
           </div>
 
           <div>
             <label className={labelCls}>
-              Description{' '}
-              <span className="normal-case tracking-normal font-normal text-zinc-400">(optional)</span>
+              Description{" "}
+              <span className="normal-case tracking-normal font-normal text-zinc-400">
+                (optional)
+              </span>
             </label>
             <textarea
-              {...register('description')}
+              {...register("description")}
               rows={3}
               placeholder="Tell customers what your business is about…"
               className={`${inputCls()} resize-none`}
@@ -263,27 +293,33 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>
-                Phone{' '}
-                <span className="normal-case tracking-normal font-normal text-zinc-400">(optional)</span>
+                Phone{" "}
+                <span className="normal-case tracking-normal font-normal text-zinc-400">
+                  (optional)
+                </span>
               </label>
               <input
-                {...register('phone')}
+                {...register("phone")}
                 placeholder="+237 6XX XXX XXX"
                 className={inputCls()}
               />
             </div>
             <div>
               <label className={labelCls}>
-                Email{' '}
-                <span className="normal-case tracking-normal font-normal text-zinc-400">(optional)</span>
+                Email{" "}
+                <span className="normal-case tracking-normal font-normal text-zinc-400">
+                  (optional)
+                </span>
               </label>
               <input
-                {...register('email')}
+                {...register("email")}
                 type="email"
                 placeholder="business@email.com"
                 className={inputCls(!!errors.email)}
               />
-              {errors.email && <p className={errorCls}>{errors.email.message}</p>}
+              {errors.email && (
+                <p className={errorCls}>{errors.email.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -295,7 +331,9 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
         <div
           onClick={() => logoInputRef.current?.click()}
           className={`border-2 border-dashed cursor-pointer transition-colors flex items-center gap-4 px-5 py-4 ${
-            errors.logo ? 'border-red-300 bg-red-50' : 'border-zinc-200 hover:border-amber-400 bg-zinc-50'
+            errors.logo
+              ? "border-red-300 bg-red-50"
+              : "border-zinc-200 hover:border-amber-400 bg-zinc-50"
           }`}
         >
           {logoPreview ? (
@@ -307,7 +345,9 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
                 className="w-14 h-14 object-cover border border-zinc-200"
               />
               <div>
-                <p className="text-sm font-semibold text-zinc-700">Logo selected</p>
+                <p className="text-sm font-semibold text-zinc-700">
+                  Logo selected
+                </p>
                 <p className="text-xs text-zinc-400 mt-0.5">Click to change</p>
               </div>
             </>
@@ -317,8 +357,12 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
                 <ImageIcon size={22} className="text-zinc-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-zinc-700">Upload business logo</p>
-                <p className="text-xs text-zinc-400 mt-0.5">PNG, JPG, WEBP — images only</p>
+                <p className="text-sm font-semibold text-zinc-700">
+                  Upload business logo
+                </p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  PNG, JPG, WEBP — images only
+                </p>
               </div>
             </>
           )}
@@ -330,14 +374,73 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
           className="hidden"
           onChange={handleLogoChange}
         />
-        {errors.logo && <p className={errorCls}>{errors.logo.message as string}</p>}
+        {errors.logo && (
+          <p className={errorCls}>{errors.logo.message as string}</p>
+        )}
+      </div>
+
+      {/* ── Banner ── */}
+      <div>
+        <p className={`${labelCls} text-zinc-400 mb-3`}>Business Banner</p>
+        <div
+          onClick={() => bannerInputRef.current?.click()}
+          className={`border-2 border-dashed cursor-pointer transition-colors flex items-center gap-4 px-5 py-4 ${
+            errors.banner
+              ? "border-red-300 bg-red-50"
+              : "border-zinc-200 hover:border-amber-400 bg-zinc-50"
+          }`}
+        >
+          {bannerPreview ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bannerPreview}
+                alt="Banner preview"
+                className="w-14 h-14 object-cover border border-zinc-200"
+              />
+              <div>
+                <p className="text-sm font-semibold text-zinc-700">
+                  Banner selected
+                </p>
+                <p className="text-xs text-zinc-400 mt-0.5">Click to change</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-14 h-14 bg-zinc-100 flex items-center justify-center shrink-0">
+                <ImageIcon size={22} className="text-zinc-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-700">
+                  Upload business banner
+                </p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  PNG, JPG, WEBP — images only
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleBannerChange}
+        />
+        {errors.banner && (
+          <p className={errorCls}>{errors.banner.message as string}</p>
+        )}
       </div>
 
       {/* ── Documents ── */}
       <div>
-        <p className={`${labelCls} text-zinc-400 mb-3`}>Verification Documents</p>
+        <p className={`${labelCls} text-zinc-400 mb-3`}>
+          Verification Documents
+        </p>
         <p className="text-xs text-zinc-500 mb-3">
-          Upload business registration certificate, ID, or any document that verifies your business.
+          Upload business registration certificate, ID, or any document that
+          verifies your business.
         </p>
 
         {/* Uploaded docs list */}
@@ -350,7 +453,9 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText size={14} className="text-amber-500 shrink-0" />
-                  <span className="text-xs text-zinc-700 truncate">{file.name}</span>
+                  <span className="text-xs text-zinc-700 truncate">
+                    {file.name}
+                  </span>
                   <span className="text-xs text-zinc-400 shrink-0">
                     ({(file.size / 1024).toFixed(0)} KB)
                   </span>
@@ -372,12 +477,12 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
           onClick={() => docsInputRef.current?.click()}
           className={`w-full flex items-center justify-center gap-2 border-2 border-dashed px-5 py-4 text-sm font-semibold transition-colors ${
             errors.documents
-              ? 'border-red-300 text-red-400 bg-red-50'
-              : 'border-zinc-200 text-zinc-500 hover:border-amber-400 hover:text-amber-500 bg-zinc-50'
+              ? "border-red-300 text-red-400 bg-red-50"
+              : "border-zinc-200 text-zinc-500 hover:border-amber-400 hover:text-amber-500 bg-zinc-50"
           }`}
         >
           <Upload size={15} />
-          {docFiles.length > 0 ? 'Add more documents' : 'Upload documents'}
+          {docFiles.length > 0 ? "Add more documents" : "Upload documents"}
         </button>
         <input
           ref={docsInputRef}
@@ -400,7 +505,10 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
             <label className={labelCls}>Search Address</label>
             <div className="relative" ref={suggestionsRef}>
               <div className="relative flex items-center">
-                <Search size={15} className="absolute left-3.5 text-zinc-400 pointer-events-none" />
+                <Search
+                  size={15}
+                  className="absolute left-3.5 text-zinc-400 pointer-events-none"
+                />
                 <input
                   value={query}
                   onChange={handleQueryChange}
@@ -409,11 +517,17 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
                 />
                 <div className="absolute right-2 flex items-center gap-1">
                   {query && (
-                    <button type="button" onClick={clearSearch} className="p-1.5 text-zinc-400 hover:text-zinc-600">
+                    <button
+                      type="button"
+                      onClick={clearSearch}
+                      className="p-1.5 text-zinc-400 hover:text-zinc-600"
+                    >
                       <X size={13} />
                     </button>
                   )}
-                  {isFetchingSuggestions && <Loader2 size={14} className="text-zinc-400 animate-spin" />}
+                  {isFetchingSuggestions && (
+                    <Loader2 size={14} className="text-zinc-400 animate-spin" />
+                  )}
                   <button
                     type="button"
                     onClick={handleDetect}
@@ -421,7 +535,11 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
                     title="Detect my location"
                     className="p-1.5 text-zinc-400 hover:text-amber-500 transition-colors disabled:opacity-40"
                   >
-                    {isDetecting ? <Loader2 size={14} className="animate-spin" /> : <LocateFixed size={14} />}
+                    {isDetecting ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <LocateFixed size={14} />
+                    )}
                   </button>
                 </div>
               </div>
@@ -435,7 +553,10 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
                       onClick={() => handleSelectSuggestion(feature)}
                       className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-amber-50 border-b border-zinc-100 last:border-0 transition-colors"
                     >
-                      <MapPin size={13} className="text-amber-500 mt-0.5 shrink-0" />
+                      <MapPin
+                        size={13}
+                        className="text-amber-500 mt-0.5 shrink-0"
+                      />
                       <span className="text-sm text-zinc-700 leading-snug">
                         {feature.properties.formatted}
                       </span>
@@ -456,7 +577,11 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
                 </span>
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={mapPreviewUrl} alt="Map preview" className="w-full h-40 object-cover" />
+              <img
+                src={mapPreviewUrl}
+                alt="Map preview"
+                className="w-full h-40 object-cover"
+              />
             </div>
           )}
 
@@ -464,11 +589,19 @@ export function VendorRegistrationForm({ onSuccess, isLoading }: VendorRegistrat
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>City</label>
-              <input {...register('city')} placeholder="City" className={inputCls()} />
+              <input
+                {...register("city")}
+                placeholder="City"
+                className={inputCls()}
+              />
             </div>
             <div>
               <label className={labelCls}>Region</label>
-              <input {...register('region')} placeholder="Region" className={inputCls()} />
+              <input
+                {...register("region")}
+                placeholder="Region"
+                className={inputCls()}
+              />
             </div>
           </div>
         </div>

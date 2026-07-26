@@ -1,12 +1,12 @@
 // src/features/Vendor/types.ts
 
 export type VendorStatus =
-  | 'PENDING_APPROVAL'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'SUSPENDED';
+  | "PENDING_APPROVAL"
+  | "APPROVED"
+  | "REJECTED"
+  | "SUSPENDED";
 
-export type PayoutSchedule = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+export type PayoutSchedule = "DAILY" | "WEEKLY" | "MONTHLY";
 
 export interface VendorDocument {
   id: string;
@@ -72,6 +72,12 @@ export interface VendorProfilePayload {
   longitude?: number;
   logo?: File;
   documents?: File[];
+  banner?: File | null;
 }
 
-export type VendorAccessState = 'loading' | 'pending' | 'rejected' | 'active' | 'error';
+export type VendorAccessState =
+  | "loading"
+  | "pending"
+  | "rejected"
+  | "active"
+  | "error";

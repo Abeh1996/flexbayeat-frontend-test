@@ -50,6 +50,17 @@ export async function checkOtpVerifiedAction(): Promise<boolean> {
   return !!cookieStore.get('fb_otp_verified')?.value;
 }
 
+export async function setStayLoggedInAction(value: boolean): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set('fb_stay_logged_in', String(value), {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    // Long-lived — persists across sessions intentionally
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+ 
 
 // destroySessionAction — delete all three
 export async function destroySessionAction(): Promise<{ success: boolean }> {

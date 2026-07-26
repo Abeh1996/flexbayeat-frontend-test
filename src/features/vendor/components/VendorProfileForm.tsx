@@ -49,6 +49,10 @@ const schema = z.object({
     .instanceof(File)
     .refine((f) => f.type.startsWith('image/'), 'Must be an image file')
     .optional(),
+  banner: z
+    .instanceof(File)
+    .refine((f) => f.type.startsWith('image/'), 'Must be an image file')
+    .optional(),
   documents: z.array(z.instanceof(File)).optional(),
 });
 
@@ -78,11 +82,13 @@ export function VendorProfileForm({ vendorProfile, onSuccess, isLoading }: Vendo
   const [isDetecting, setIsDetecting] = useState(false);
   const [showMap, setShowMap] = useState(!!(vendorProfile.latitude && vendorProfile.longitude));
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [newDocFiles, setNewDocFiles] = useState<File[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const docsInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -206,6 +212,13 @@ export function VendorProfileForm({ vendorProfile, onSuccess, isLoading }: Vendo
     setLogoPreview(URL.createObjectURL(file));
   };
 
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setValue('banner', file, { shouldValidate: true });
+    setBannerPreview(URL.createObjectURL(file));
+  };
+
   const handleDocsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -232,6 +245,7 @@ export function VendorProfileForm({ vendorProfile, onSuccess, isLoading }: Vendo
       latitude: values.latitude,
       longitude: values.longitude,
       ...(values.logo ? { logo: values.logo } : {}),
+      ...(values.banner ? { banner: values.banner } : {}),
       ...(values.documents?.length ? { documents: values.documents } : {}),
     });
   };
@@ -337,6 +351,47 @@ export function VendorProfileForm({ vendorProfile, onSuccess, isLoading }: Vendo
         </div>
         <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
         {errors.logo && <p className={errorCls}>{errors.logo.message as string}</p>}
+      </div>
+
+      {/* ── Banner ── */}
+      <div>
+        <p className={`${labelCls} text-zinc-400 mb-3`}>Business Banner</p>
+        <div
+          onClick={() => bannerInputRef.current?.click()}
+          className="border-2 border-dashed border-zinc-200 hover:border-amber-400 bg-zinc-50 cursor-pointer transition-colors flex items-center gap-4 px-5 py-4"
+        >
+          {bannerPreview ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={bannerPreview} alt="New banner preview" className="w-14 h-14 object-cover border border-zinc-200" />
+              <div>
+                <p className="text-sm font-semibold text-zinc-700">New banner selected</p>
+                <p className="text-xs text-zinc-400 mt-0.5">Click to change again</p>
+              </div>
+            </>
+          ) : vendorProfile.bannerUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={vendorProfile.bannerUrl} alt="Current banner" className="w-14 h-14 object-cover border border-zinc-200" />
+              <div>
+                <p className="text-sm font-semibold text-zinc-700">Current banner</p>
+                <p className="text-xs text-zinc-400 mt-0.5">Click to replace</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-14 h-14 bg-zinc-100 flex items-center justify-center shrink-0">
+                <ImageIcon size={22} className="text-zinc-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-700">Upload business banner</p>
+                <p className="text-xs text-zinc-400 mt-0.5">PNG, JPG, WEBP — images only</p>
+              </div>
+            </>
+          )}
+        </div>
+        <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerChange} />
+        {errors.banner && <p className={errorCls}>{errors.banner.message as string}</p>}
       </div>
 
       {/* ── Documents ── */}

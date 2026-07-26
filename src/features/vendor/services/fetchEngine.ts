@@ -17,6 +17,7 @@ const toFormData = (payload: VendorProfilePayload): FormData => {
   if (payload.latitude !== undefined) form.append('latitude', String(payload.latitude));
   if (payload.longitude !== undefined) form.append('longitude', String(payload.longitude));
   if (payload.logo) form.append('logo', payload.logo);
+  if (payload.banner) form.append('banner', payload.banner);
   if (payload.documents?.length) {
     payload.documents.forEach((doc) => form.append('documents', doc));
   }

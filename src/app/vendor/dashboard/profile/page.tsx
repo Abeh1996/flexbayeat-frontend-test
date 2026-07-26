@@ -13,7 +13,9 @@ export default function VendorProfilePage() {
   const { updateVendorProfile, isUpdatingVendorProfile } = useVendorMutation();
 
   const handleSave = (payload: Partial<VendorProfilePayload>) => {
-    updateVendorProfile(payload);
+    updateVendorProfile(payload, {
+      onSuccess: () => refetchVendorProfile(),
+    });
   };
 
   // ── Loading ───────────────────────────────────────────────────────────────

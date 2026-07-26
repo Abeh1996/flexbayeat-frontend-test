@@ -11,15 +11,15 @@ import JoinNetwork from "@/components/landing/JoinNetwork";
 export default function Home() {
   return (
    <div>
-      <Header />
+      {/* <Header /> */}
       <Hero />
       <TopCategories />
-      <FeaturedKitchens />
       <TrendingMeals />
+      <FeaturedKitchens />
       <HowItWorks />
       <JoinNetwork />
-      <Newsletter />
-      <Footer />
+      {/* <Newsletter />
+      <Footer /> */}
    </div>
   );
 }

@@ -4,14 +4,12 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
   AxiosResponse,
-} from "axios";
-import Cookies from "js-cookie";
-import { API_ROUTES } from "./endpoints";
+} from 'axios';
+import Cookies from 'js-cookie';
+import { API_ROUTES } from './endpoints';
 
-const API_BASE_URL = "http://3.250.40.253:5000";
-// ;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://3.250.40.253:5000';
 
-// Type definition for our backend's custom error response body
 interface BackendErrorResponse {
   message?: string;
   statusCode?: number;
@@ -21,75 +19,155 @@ interface BackendErrorResponse {
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 12000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // headers: { 'Content-Type': 'application/json' },
 });
 
-// Outgoing Request Interceptor with explicit type safety
+// ── Request interceptor — attach Bearer token ─────────────────────────────────
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-    const token = Cookies.get("fb_session");
-
+    const token = Cookies.get('fb_session');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
     return config;
   },
-  (error: AxiosError): Promise<never> => {
-    return Promise.reject(error);
-  },
+  (error: AxiosError): Promise<never> => Promise.reject(error),
 );
 
-// Incoming Response Interceptor with zero "any" types
+// ── Token refresh state ───────────────────────────────────────────────────────
+// Prevents multiple simultaneous refresh calls (race condition guard)
+let isRefreshing = false;
+let refreshQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (err: unknown) => void;
+}> = [];
+
+function processRefreshQueue(error: unknown, token: string | null = null) {
+  refreshQueue.forEach((p) => {
+    if (error) p.reject(error);
+    else p.resolve(token!);
+  });
+  refreshQueue = [];
+}
+
+async function attemptTokenRefresh(): Promise<string> {
+  const refreshToken = Cookies.get('fb_refresh_token');
+  if (!refreshToken) throw new Error('No refresh token available');
+
+  const response = await axios.post<{ access_token: string }>(
+    `${API_BASE_URL}${API_ROUTES.auth.refresh}`,
+    { refresh_token: refreshToken },
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  const newToken = response.data.access_token;
+  // Store new access token
+  Cookies.set('fb_session', newToken, {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  return newToken;
+}
+
+function shouldAttemptRefresh(): boolean {
+  // Check stay-logged-in preference — if explicitly false, don't refresh
+  const stayLoggedIn = Cookies.get('fb_stay_logged_in');
+  // undefined (not set) → refresh (default behavior)
+  // "true" → refresh
+  // "false" → don't refresh, logout
+  return stayLoggedIn !== 'false';
+}
+
+function logoutUser() {
+  Cookies.remove('fb_session');
+  Cookies.remove('fb_refresh_token');
+  Cookies.remove('fb_user_role');
+  Cookies.remove('fb_otp_verified');
+  // Don't remove fb_stay_logged_in — preserve preference for next login
+  if (typeof window !== 'undefined') {
+    window.location.replace('/auth/buyer/login');
+  }
+}
+
+// ── Response interceptor — handle 401 with token refresh ─────────────────────
 api.interceptors.response.use(
   (response: AxiosResponse): AxiosResponse => response,
   async (error: AxiosError<BackendErrorResponse>): Promise<never> => {
-    // 1. Defend against network drops or connection drops
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
+
+    // Network error
     if (!error.response) {
       return Promise.reject(
-        new Error(
-          "Network connectivity lost. Please check your data connection.",
-        ),
+        new Error('Network connectivity lost. Please check your data connection.')
       );
     }
 
     const { status, data } = error.response;
 
-    // 2. Clear sessions globally on 401 Unauthorized
-    if (status === 401) {
-      if (typeof window !== "undefined") {
-        const currentPath = window.location.pathname;
+    // ── 401 handling with token refresh ──────────────────────────────────────
+    if (status === 401 && !originalRequest._retry) {
+      // If refresh is already in progress, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          refreshQueue.push({
+            resolve: (token: string) => {
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
+              resolve(api(originalRequest) as never);
+            },
+            reject,
+          });
+        });
+      }
 
-        // Redirect safely only if accessing protected operational areas
-        if (
-          currentPath.startsWith("/dashboard") ||
-          currentPath.startsWith("/checkout")
-        ) {
-          Cookies.remove("fb_session");
-          Cookies.remove("fb_user_role");
+      // Check if we should try refreshing
+      if (!shouldAttemptRefresh()) {
+        logoutUser();
+        return Promise.reject(new Error('Session expired. Please sign in again.'));
+      }
 
-          // Using our imported API_ROUTES configuration map cleanly
-          window.location.replace(
-            `${API_ROUTES.auth.signin}?next=${encodeURIComponent(currentPath)}`,
-          );
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const newToken = await attemptTokenRefresh();
+        processRefreshQueue(null, newToken);
+
+        // Retry original request with new token
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
         }
+        return api(originalRequest) as never;
+      } catch (refreshError) {
+        processRefreshQueue(refreshError, null);
+        // Refresh failed — logout regardless of stay-logged-in preference
+        logoutUser();
+        return Promise.reject(new Error('Session expired. Please sign in again.'));
+      } finally {
+        isRefreshing = false;
       }
     }
 
-    // 3. Handle Permission boundary updates on 403 Forbidden
+    // ── 403 handling ──────────────────────────────────────────────────────────
     if (status === 403) {
-      if (typeof window !== "undefined") {
-        window.location.replace("/unauthorized");
+      if (typeof window !== 'undefined') {
+        window.location.replace('/unauthorized');
       }
     }
 
-    // 4. Extract explicit messages from your typed backend error schema
     const parsedErrorMessage =
-      data?.message || "A severe internal server operation error occurred.";
-    if (process.env.NODE_ENV === "development") {
+      data?.message || 'A severe internal server operation error occurred.';
+    if (process.env.NODE_ENV === 'development') {
       console.error(`[API Error] ${status}:`, data);
     }
     return Promise.reject(new Error(parsedErrorMessage));
-  },
+  }
 );

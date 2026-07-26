@@ -8,22 +8,24 @@ import { Eye, EyeOff, ArrowRight, Loader2, Phone, Mail } from "lucide-react";
 import Link from "next/link";
 import { useAuthMutation } from "../hooks/useAuthMutation";
 import type { UseFormRegisterReturn } from "react-hook-form";
+import { setStayLoggedInAction } from "../services/serverActions";
 
 type Method = "phone" | "email";
 
-const schema = {
-  phone: z.object({
-    phone: z.string().min(8, "Enter a valid phone number"),
-    password: z.string().min(1, "Password is required"),
-  }),
-  email: z.object({
-    email: z.string().min(1, "Email is required").email("Invalid email"),
-    password: z.string().min(1, "Password is required"),
-  }),
-};
+const phoneSchema = z.object({
+  phone: z.string().min(8, "Enter a valid phone number"),
+  password: z.string().min(1, "Password is required"),
+  stayLoggedIn: z.boolean(),
+});
 
-type PhoneValues = z.infer<typeof schema.phone>;
-type EmailValues = z.infer<typeof schema.email>;
+const emailSchema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email"),
+  password: z.string().min(1, "Password is required"),
+  stayLoggedIn: z.boolean(),
+});
+
+type PhoneValues = z.infer<typeof phoneSchema>;
+type EmailValues = z.infer<typeof emailSchema>;
 
 const inputClass = (error?: boolean) => `
   w-full px-4 py-3 bg-white border text-sm rounded-md text-zinc-900 placeholder:text-zinc-400
@@ -67,6 +69,21 @@ function PasswordInput({
   );
 }
 
+function StayLoggedInCheckbox({ register }: { register: UseFormRegisterReturn }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer group">
+      <input
+        type="checkbox"
+        {...register}
+        className="w-4 h-4 accent-amber-500 cursor-pointer"
+      />
+      <span className="text-sm font-medium text-zinc-600 group-hover:text-zinc-900 transition-colors">
+        Stay signed in
+      </span>
+    </label>
+  );
+}
+
 const SubmitBtn = ({ loading }: { loading: boolean }) => (
   <button
     type="submit"
@@ -90,11 +107,24 @@ export function SignInForm() {
   const { signIn, isSigningIn } = useAuthMutation();
 
   const phoneForm = useForm<PhoneValues>({
-    resolver: zodResolver(schema.phone),
+    resolver: zodResolver(phoneSchema),
+    defaultValues: { stayLoggedIn: true },
   });
+
   const emailForm = useForm<EmailValues>({
-    resolver: zodResolver(schema.email),
+    resolver: zodResolver(emailSchema),
+    defaultValues: { stayLoggedIn: true },
   });
+
+  const handlePhoneSubmit = async (v: PhoneValues) => {
+    await setStayLoggedInAction(v.stayLoggedIn);
+    signIn({ phone: v.phone, password: v.password });
+  };
+
+  const handleEmailSubmit = async (v: EmailValues) => {
+    await setStayLoggedInAction(v.stayLoggedIn);
+    signIn({ email: v.email, password: v.password });
+  };
 
   return (
     <div className="space-y-5 mt-6">
@@ -105,7 +135,11 @@ export function SignInForm() {
             key={m}
             type="button"
             onClick={() => setMethod(m)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold uppercase tracking-wide transition-colors duration-150 ${method === m ? "bg-zinc-900 text-white" : "bg-white text-zinc-500 hover:text-zinc-800"}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold uppercase tracking-wide transition-colors duration-150 ${
+              method === m
+                ? "bg-zinc-900 text-white"
+                : "bg-white text-zinc-500 hover:text-zinc-800"
+            }`}
           >
             {m === "phone" ? <Phone size={13} /> : <Mail size={13} />}
             {m}
@@ -116,9 +150,7 @@ export function SignInForm() {
       {/* Phone form */}
       {method === "phone" && (
         <form
-          onSubmit={phoneForm.handleSubmit((v) =>
-            signIn({ phone: v.phone, password: v.password }),
-          )}
+          onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)}
           noValidate
           className="space-y-4"
         >
@@ -149,6 +181,7 @@ export function SignInForm() {
               Forgot password?
             </Link>
           </div>
+          <StayLoggedInCheckbox register={phoneForm.register("stayLoggedIn")} />
           <SubmitBtn loading={isSigningIn} />
         </form>
       )}
@@ -156,9 +189,7 @@ export function SignInForm() {
       {/* Email form */}
       {method === "email" && (
         <form
-          onSubmit={emailForm.handleSubmit((v) =>
-            signIn({ email: v.email, password: v.password }),
-          )}
+          onSubmit={emailForm.handleSubmit(handleEmailSubmit)}
           noValidate
           className="space-y-4"
         >
@@ -189,6 +220,7 @@ export function SignInForm() {
               Forgot password?
             </Link>
           </div>
+          <StayLoggedInCheckbox register={emailForm.register("stayLoggedIn")} />
           <SubmitBtn loading={isSigningIn} />
         </form>
       )}

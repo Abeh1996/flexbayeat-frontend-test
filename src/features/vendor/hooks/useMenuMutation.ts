@@ -8,6 +8,7 @@ import {
   UpdateCategoryPayload,
   CreateMenuItemPayload,
   UpdateMenuItemPayload,
+  MenuItemStatus,
 } from '../types/menu.types';
 
 const dev = process.env.NODE_ENV === 'development';
@@ -17,7 +18,7 @@ export function useCategoryMutation() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['vendor-categories'] });
 
   const createMutation = useMutation({
-    mutationFn: (payload: CreateCategoryPayload) => menuFetchEngine.createCategory(payload),
+    mutationFn: (payload: CreateCategoryPayload & { image?: File }) => menuFetchEngine.createCategory(payload),
     onSuccess: () => {
       toast.success('Category created', { duration: 3000 });
       invalidate();
@@ -29,7 +30,7 @@ export function useCategoryMutation() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: UpdateCategoryPayload }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateCategoryPayload & { image?: File } }) =>
       menuFetchEngine.updateCategory(id, payload),
     onSuccess: () => {
       toast.success('Category updated', { duration: 3000 });
@@ -98,6 +99,19 @@ export function useItemMutation() {
     },
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { status: MenuItemStatus } }) =>
+      menuFetchEngine.updateItem(id, payload),
+    onSuccess: async (data) => {
+      toast.success(`Item is now ${data.status.toLowerCase()}`, { duration: 2000 });
+      await refetchCategories();
+    },
+    onError: (error: Error) => {
+      if (dev) console.error('[updateItemStatus]', error);
+      toast.error('Failed to update status', { description: error.message, duration: 5000 });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => menuFetchEngine.deleteItem(id),
     onSuccess: async () => {
@@ -117,6 +131,10 @@ export function useItemMutation() {
 
     updateItem: updateMutation.mutate,
     isUpdatingItem: updateMutation.isPending,
+
+    updateItemStatus: updateStatusMutation.mutate,
+    isUpdatingStatus: updateStatusMutation.isPending,
+    updatingStatusId: (updateStatusMutation.variables as any)?.id,
 
     deleteItem: deleteMutation.mutate,
     isDeletingItem: deleteMutation.isPending,

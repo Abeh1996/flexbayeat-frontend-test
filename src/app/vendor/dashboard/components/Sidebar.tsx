@@ -82,9 +82,9 @@ export function Sidebar({ businessName, logoUrl, isOpen, onClose }: SidebarProps
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`flex rounded-md items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
-                    ? 'bg-amber-500 text-white'
+                    ? 'bg-zinc-800 text-white'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                 }`}
               >

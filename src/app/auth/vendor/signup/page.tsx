@@ -1,6 +1,6 @@
 // src/app/(auth)/auth/vendor/signup/page.tsx
 "use client";
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { OtpRequestForm } from "@/features/Auth/components/OtpRequestForm";
@@ -37,7 +37,7 @@ const variants = {
 
 const STEP_ORDER: Step[] = ["request", "verify", "complete"];
 
-export default function VendorSignupPage() {
+function VendorSignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -159,5 +159,14 @@ export default function VendorSignupPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+
+export default function VendorSignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <VendorSignupContent />
+    </Suspense>
   );
 }

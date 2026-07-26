@@ -1,7 +1,7 @@
-// src/app/vendor/(dashboard)/dashboard/menu/page.tsx
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from 'next/image';
 import {
   Plus,
   Pencil,
@@ -10,529 +10,194 @@ import {
   UtensilsCrossed,
   Flame,
   Leaf,
-  Clock,
-  Package,
-  Eye,
-  EyeOff,
-  ChevronRight,
+  Menu, // Added for hamburger menu
+  X, // Added for close button
+  ChevronDown
 } from "lucide-react";
-import { useCategoriesQuery } from "@/features/Vendor/hooks/useMenuQuery";
-import {
-  useCategoryMutation,
-  useItemMutation,
-} from "@/features/Vendor/hooks/useMenuMutation";
-import { CategoryModal } from "@/features/Vendor/components/CategoryModal";
-import { ItemDrawer } from "@/features/Vendor/components/ItemDrawer";
-import {
-  MenuCategory,
-  MenuItem,
-  CreateCategoryPayload,
-  CreateMenuItemPayload,
-  MenuItemStatus,
-} from "@/features/Vendor/types/menu.types";
+import { useCategoriesQuery } from "@/features/vendor/hooks/useMenuQuery";
+import { useCategoryMutation, useItemMutation } from "@/features/vendor/hooks/useMenuMutation";
+import { CategoryModal } from "@/features/vendor/components/CategoryModal";
+import { ItemDrawer } from "@/features/vendor/components/ItemDrawer";
+import { MenuCategory, MenuItem, CreateCategoryPayload, CreateMenuItemPayload, MenuItemStatus } from "@/features/vendor/types/menu.types";
 
-// ── Status badge ─────────────────────────────────────────────────────────────
-const STATUS_STYLES: Record<MenuItemStatus, string> = {
-  AVAILABLE: "bg-emerald-100 text-emerald-700",
-  OUT_OF_STOCK: "bg-red-100 text-red-600",
-  HIDDEN: "bg-zinc-100 text-zinc-500",
+const statusConfig = {
+  AVAILABLE: { label: 'Available', color: 'bg-green-100 text-green-700' },
+  OUT_OF_STOCK: { label: 'Sold Out', color: 'bg-red-100 text-red-700' },
+  HIDDEN: { label: 'Hidden', color: 'bg-stone-100 text-stone-500' },
 };
 
-function StatusBadge({ status }: { status: MenuItemStatus }) {
-  return (
-    <span
-      className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${STATUS_STYLES[status]}`}
-    >
-      {status === "OUT_OF_STOCK"
-        ? "Out of Stock"
-        : status.charAt(0) + status.slice(1).toLowerCase()}
-    </span>
-  );
-}
-
-// ── Item card ─────────────────────────────────────────────────────────────────
-function ItemCard({
-  item,
-  onEdit,
-  onDelete,
-  isDeleting,
-}: {
-  item: MenuItem;
-  onEdit: (item: MenuItem) => void;
-  onDelete: (id: string) => void;
-  isDeleting: boolean;
-}) {
-  // console.log("Menu item")
-  return (
-    <div className="bg-white rounded-xl border border-zinc-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-200 flex overflow-hidden">
-      {/* Image */}
-      <div className="w-28 sm:w-36 shrink-0 bg-zinc-100 relative">
-        {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <UtensilsCrossed size={22} className="text-zinc-300" />
-          </div>
-        )}
-        {/* Dietary badges on image */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {item.isSpicy && (
-            <span className="bg-red-500 rounded-full p-1">
-              <Flame size={9} className="text-white" />
-            </span>
-          )}
-          {item.isVegetarian && (
-            <span className="bg-emerald-500 rounded-full p-1">
-              <Leaf size={9} className="text-white" />
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Details */}
-      <div className="flex-1 min-w-0 p-4 flex flex-col justify-between gap-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-zinc-900 truncate">
-              {item.name}
-            </h3>
-            {item.description && (
-              <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2 leading-relaxed">
-                {item.description}
-              </p>
-            )}
-          </div>
-          {/* Actions */}
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => onEdit(item)}
-              className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
-              title="Edit item"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
-              onClick={() => onDelete(item.id)}
-              disabled={isDeleting}
-              className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-              title="Delete item"
-            >
-              {isDeleting ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Trash2 size={13} />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Bottom row */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-base font-black text-zinc-900">
-            {Number(item.price).toLocaleString()} XAF
-          </span>
-          <div className="flex items-center gap-2">
-            {item.preparationTimeMin && (
-              <span className="flex items-center gap-1 text-xs text-zinc-400">
-                <Clock size={11} />
-                {item.preparationTimeMin}min
-              </span>
-            )}
-            {item.stockCount !== null && item.stockCount !== undefined && (
-              <span className="flex items-center gap-1 text-xs text-zinc-400">
-                <Package size={11} />
-                {item.stockCount}
-              </span>
-            )}
-            <StatusBadge status={item.status} />
-          </div>
-        </div>
+const MenuItemCard = ({ item, onEdit, onStatusChange, isUpdating }: { item: MenuItem, onEdit:()=>void, onStatusChange:(s:MenuItemStatus)=>void, isUpdating: boolean }) => (
+  <div className="bg-white rounded-xl shadow-sm border border-stone-200/80 group">
+    <div className="relative h-40">
+      <Image src={item.imageUrl || '/public/images/meals/pepper-burger.png'} alt={item.name} layout="fill" objectFit="cover" className="rounded-t-xl" />
+      <div className="absolute top-2 right-2">
+        <StatusToggle currentStatus={item.status} onChange={onStatusChange} isLoading={isUpdating} />
       </div>
     </div>
-  );
+    <div className="p-4">
+      <h3 className="font-bold text-stone-800 truncate">{item.name}</h3>
+      <p className="text-xs text-stone-500 h-8 line-clamp-2 mt-1">{item.description}</p>
+      <div className="flex justify-between items-center mt-4">
+        <p className="font-extrabold text-lg text-stone-800">{Number(item.price).toLocaleString()} XAF</p>
+        <button onClick={onEdit} className="bg-stone-100 group-hover:bg-amber-100 text-stone-600 group-hover:text-amber-700 p-2 rounded-lg transition-all">
+          <Pencil size={16} />
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const StatusToggle = ({ currentStatus, onChange, isLoading }: { currentStatus: MenuItemStatus, onChange: (s:MenuItemStatus)=>void, isLoading: boolean }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const statuses: MenuItemStatus[] = ['AVAILABLE', 'OUT_OF_STOCK', 'HIDDEN'];
+  const currentConf = statusConfig[currentStatus];
+
+  if (isLoading) return <div className="p-2 bg-white/80 rounded-full shadow-md"><Loader2 className="animate-spin text-stone-500" size={16}/></div>
+
+  return (
+    <div className="relative">
+      <button onClick={() => setIsOpen(!isOpen)} className={`flex items-center gap-2 text-xs font-bold py-1.5 px-3 rounded-full shadow-md transition-all ${currentConf.color} bg-white/80 backdrop-blur-sm`}>
+        {currentConf.label} <ChevronDown size={14} className={`${isOpen ? 'rotate-180' : ''} transition-transform`} />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full right-0 mt-2 w-36 bg-white rounded-lg shadow-xl border border-stone-200/80 p-1 z-10">
+          {statuses.map(status => (
+            <button
+              key={status}
+              onClick={() => { onChange(status); setIsOpen(false); }}
+              className={`w-full text-left text-sm px-3 py-1.5 rounded-md hover:bg-stone-100 ${status === currentStatus ? 'font-bold text-amber-600' : 'text-stone-700'}`}
+            >
+              {statusConfig[status].label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 function VendorMenuPageInner() {
-  const { categories, allItems, isLoadingCategories, isErrorCategories } =
-    useCategoriesQuery();
-
-  const {
-    createCategory,
-    isCreatingCategory,
-    updateCategory,
-    isUpdatingCategory,
-    deleteCategory,
-    isDeletingCategory,
-  } = useCategoryMutation();
-  const {
-    createItem,
-    isCreatingItem,
-    updateItem,
-    isUpdatingItem,
-    deleteItem,
-    isDeletingItem,
-  } = useItemMutation();
-
-  console.log("Categories", categories);
-  console.log("All items", allItems);
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeCategoryId = searchParams.get("category");
-  const [categoryModal, setCategoryModal] = useState<{
-    open: boolean;
-    editing: MenuCategory | null;
-  }>({
-    open: false,
-    editing: null,
-  });
-  const [itemDrawer, setItemDrawer] = useState<{
-    open: boolean;
-    editing: MenuItem | null;
-  }>({
-    open: false,
-    editing: null,
-  });
-  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(
-    null,
-  );
-  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
-  // Set first category in URL if none selected
+  const { categories, allItems, isLoadingCategories, isErrorCategories } = useCategoriesQuery();
+  const { createCategory, isCreatingCategory, updateCategory, isUpdatingCategory, deleteCategory, isDeletingCategory } = useCategoryMutation();
+  const { createItem, isCreatingItem, updateItem, isUpdatingItem, updateItemStatus, isUpdatingStatus, updatingStatusId, deleteItem, isDeletingItem } = useItemMutation();
+
+  const [categoryModal, setCategoryModal] = useState<{ open: boolean, editing: MenuCategory | null }>({ open: false, editing: null });
+  const [itemDrawer, setItemDrawer] = useState<{ open: boolean, editing: MenuItem | null }>({ open: false, editing: null });
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // New state for mobile sidebar
+
   useEffect(() => {
     if (categories.length > 0 && !activeCategoryId) {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("category", categories[0].id);
-      router.replace(`?${params.toString()}`);
+      router.replace(`?category=${categories[0].id}`);
     }
-  }, [categories, activeCategoryId]);
+  }, [categories, activeCategoryId, router]);
 
-  const activeCategory =
-    categories.find((c) => c.id === activeCategoryId) ?? null;
-  const activeItems = allItems.filter(
-    (item) => item.menuCategoryId === activeCategoryId,
-  );
-  
+  const activeCategory = categories.find(c => c.id === activeCategoryId) ?? categories[0] ?? null;
+  const activeItems = allItems.filter(item => item.menuCategoryId === activeCategory?.id);
 
-  const handleCreateCategory = (payload: CreateCategoryPayload) => {
-    createCategory(payload, {
-      onSuccess: () => setCategoryModal({ open: false, editing: null }),
-    });
-  };
-
-  const handleUpdateCategory = (payload: CreateCategoryPayload) => {
-    if (!categoryModal.editing) return;
-    updateCategory(
-      { id: categoryModal.editing.id, payload },
-      { onSuccess: () => setCategoryModal({ open: false, editing: null }) },
-    );
-  };
-
-  const handleDeleteCategory = (id: string) => {
-    setDeletingCategoryId(id);
-    deleteCategory(id, { onSettled: () => setDeletingCategoryId(null) });
-  };
-
-  const handleCreateItem = (payload: CreateMenuItemPayload) => {
-    createItem(payload, {
-      onSuccess: () => setItemDrawer({ open: false, editing: null }),
-    });
-  };
-
-  const handleUpdateItem = (payload: CreateMenuItemPayload) => {
-    if (!itemDrawer.editing) return;
-    updateItem(
-      { id: itemDrawer.editing.id, payload },
-      { onSuccess: () => setItemDrawer({ open: false, editing: null }) },
-    );
-  };
-
-  const handleDeleteItem = (id: string) => {
-    setDeletingItemId(id);
-    deleteItem(id, { onSettled: () => setDeletingItemId(null) });
-  };
-
-  // ── Loading ────────────────────────────────────────────────────────────────
-  if (isLoadingCategories) {
-    return (
-      <div className="p-6 lg:p-10 space-y-4">
-        <div className="h-8 w-48 bg-zinc-100 rounded-lg animate-pulse" />
-        <div className="flex gap-2">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-10 w-28 bg-zinc-100 rounded-full animate-pulse"
-            />
-          ))}
-        </div>
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-28 bg-zinc-100 rounded-xl animate-pulse"
-            />
-          ))}
-        </div>
-      </div>
-    );
+  const handleUpdateItemStatus = (itemId: string, status: MenuItemStatus) => {
+    updateItemStatus({ id: itemId, payload: { status }});
   }
 
-  // ── Error ──────────────────────────────────────────────────────────────────
-  if (isErrorCategories) {
-    return (
-      <div className="p-6 lg:p-10">
-        <p className="text-sm text-red-500 font-medium">
-          Failed to load menu. Try refreshing.
-        </p>
-      </div>
-    );
-  }
+  if (isLoadingCategories) return <div className="w-full h-full flex items-center justify-center"><Loader2 className="animate-spin text-amber-500" size={32}/></div>;
+  if (isErrorCategories) return <div className="p-8"><p className="text-red-500">Failed to load menu data.</p></div>;
 
-  // ── Empty — no categories yet ───────────────────────────────────────────────
-  if (categories.length === 0) {
-    return (
-      <div className="p-6 lg:p-10">
-        <div className="flex flex-col items-center justify-center text-center py-20 border-2 border-dashed border-zinc-200 rounded-2xl bg-zinc-50">
-          <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mb-4">
-            <UtensilsCrossed size={26} className="text-amber-500" />
-          </div>
-          <h3 className="text-base font-black text-zinc-900">
-            Your menu is empty
-          </h3>
-          <p className="text-sm text-zinc-500 mt-1 max-w-xs">
-            Start by creating a category like "Main Courses" or "Beverages",
-            then add your items.
-          </p>
-          <button
-            onClick={() => setCategoryModal({ open: true, editing: null })}
-            className="mt-6 flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold uppercase tracking-widest px-6 py-3 rounded-xl transition-colors"
-          >
-            <Plus size={15} />
-            Create First Category
-          </button>
-        </div>
-
-        <CategoryModal
-          isOpen={categoryModal.open}
-          onClose={() => setCategoryModal({ open: false, editing: null })}
-          onSubmit={handleCreateCategory}
-          isLoading={isCreatingCategory}
-          editingCategory={null}
-        />
-      </div>
-    );
-  }
-
-  // ── Main menu view ─────────────────────────────────────────────────────────
   return (
-    <div className="p-6 lg:p-10 space-y-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-black uppercase tracking-tight text-zinc-900">
-            Menu
-          </h2>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            {categories.length} categor{categories.length === 1 ? "y" : "ies"} ·{" "}
-            {allItems.length} item{allItems.length === 1 ? "" : "s"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCategoryModal({ open: true, editing: null })}
-            className="flex items-center gap-1.5 border border-zinc-200 hover:border-amber-400 text-zinc-600 hover:text-amber-600 text-xs font-bold uppercase tracking-widest px-3 py-2.5 rounded-lg transition-colors"
-          >
-            <Plus size={13} />
-            Category
-          </button>
-          <button
-            onClick={() => setItemDrawer({ open: true, editing: null })}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold uppercase tracking-widest px-4 py-2.5 rounded-lg transition-colors"
-          >
-            <Plus size={13} />
-            Add Item
-          </button>
-        </div>
+    <div className="flex flex-col sm:flex-row h-full bg-stone-50">
+      {/* Mobile Sidebar Toggle */}
+      <div className="lg:hidden p-4 bg-white border-b border-stone-200/80 flex justify-between items-center">
+        <h2 className="text-lg font-bold text-stone-800">{activeCategory?.name || 'Menu'}</h2>
+        <button onClick={() => setMobileSidebarOpen(true)} className="flex items-center gap-2 bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition-all shadow-sm">
+          <Menu size={18}/> Show Categories
+        </button>
       </div>
 
-      {/* Category tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {categories.map((cat) => (
-          <div key={cat.id} className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString());
-                params.set("category", cat.id);
-                router.push(`?${params.toString()}`);
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap ${
-                activeCategoryId === cat.id
-                  ? "bg-amber-500 text-white shadow-sm"
-                  : "bg-white border border-zinc-200 text-zinc-600 hover:border-amber-300 hover:text-amber-600"
-              }`}
-            >
-              {cat.name}
-              {!cat.isActive && <EyeOff size={11} className="opacity-60" />}
-              <span
-                className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
-                  activeCategoryId === cat.id
-                    ? "bg-white/20 text-white"
-                    : "bg-zinc-100 text-zinc-500"
-                }`}
-              >
-                {allItems.filter((i) => i.menuCategoryId === cat.id).length}
+      {/* Left Pane: Categories */}
+      <aside className={`fixed lg:static top-0 left-0 h-full w-64 bg-white border-r border-stone-200/80 flex flex-col p-4 z-40 transition-transform duration-300 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex justify-between items-center lg:hidden mb-4">
+          <h2 className="text-lg font-bold text-stone-800 px-2">Categories</h2>
+          <button onClick={() => setMobileSidebarOpen(false)} className="p-2 rounded-lg hover:bg-stone-100">
+            <X size={20}/>
+          </button>
+        </div>
+        <h2 className="hidden lg:block text-lg font-bold text-stone-800 px-2">Categories</h2> {/* Show on desktop */}
+        <div className="mt-4 flex-grow space-y-1 overflow-y-auto">
+          {categories.map(cat => (
+            <button key={cat.id} onClick={() => {router.push(`?category=${cat.id}`); setMobileSidebarOpen(false);}}
+              className={`w-full flex justify-between items-center px-3 py-2.5 text-sm font-semibold rounded-lg transition-colors text-left ${activeCategory?.id === cat.id ? 'bg-amber-100 text-amber-700' : 'text-stone-600 hover:bg-stone-100'}`}>
+              <span>{cat.name}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${activeCategory?.id === cat.id ? 'bg-amber-200' : 'bg-stone-200'}`}>
+                {allItems.filter(i => i.menuCategoryId === cat.id).length}
               </span>
             </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+        <button onClick={() => setCategoryModal({ open: true, editing: null })} className="w-full mt-4 flex items-center justify-center gap-2 bg-stone-800 text-white font-bold py-3 rounded-lg hover:bg-stone-900 transition-all">
+          <Plus size={16}/> New Category
+        </button>
+      </aside>
 
-      {/* Active category header + actions */}
-      {activeCategory && (
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-black text-zinc-900">
-                {activeCategory.name}
-              </h3>
-              {!activeCategory.isActive && (
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">
-                  Hidden
-                </span>
-              )}
+      {/* Backdrop for mobile sidebar */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setMobileSidebarOpen(false)}></div>
+      )}
+
+      {/* Right Pane: Menu Items */}
+      <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+        <header className="hidden lg:flex justify-between items-center mb-8"> {/* Hide on mobile, show on desktop */}
+            <div>
+                <h1 className="text-3xl font-bold text-stone-800">{activeCategory?.name || 'Menu'}</h1>
+                <p className="text-stone-500 mt-1">{activeCategory?.description || 'Manage your items and categories.'}</p>
             </div>
-            {activeCategory.description && (
-              <p className="text-xs text-zinc-500 mt-0.5">
-                {activeCategory.description}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() =>
-                setCategoryModal({ open: true, editing: activeCategory })
-              }
-              className="p-2 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
-              title="Edit category"
-            >
-              <Pencil size={14} />
+            <button onClick={() => setItemDrawer({ open: true, editing: null })} className="flex items-center gap-2 bg-amber-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-amber-600 transition-all shadow-sm">
+                <Plus size={18}/> Add Item
             </button>
-            <button
-              onClick={() => handleDeleteCategory(activeCategory.id)}
-              disabled={
-                isDeletingCategory && deletingCategoryId === activeCategory.id
-              }
-              className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-              title="Delete category"
-            >
-              {isDeletingCategory &&
-              deletingCategoryId === activeCategory.id ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Trash2 size={14} />
-              )}
-            </button>
+        </header>
+
+        {activeItems.length === 0 ? (
+          <div className="text-center py-20 lg:py-32 rounded-xl bg-white border-2 border-dashed border-stone-200">
+            <UtensilsCrossed size={32} className="mx-auto text-stone-300"/>
+            <h3 className="mt-4 text-lg font-semibold text-stone-700">No items in this category</h3>
+            <p className="mt-1 text-sm text-stone-500">Click "Add Item" to get started.</p>
           </div>
-        </div>
-      )}
-
-      {/* Items grid */}
-      {isLoadingCategories ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-28 bg-zinc-100 rounded-xl animate-pulse"
-            />
-          ))}
-        </div>
-      ) : activeItems.length === 0 ? (
-        <div
-          onClick={() => setItemDrawer({ open: true, editing: null })}
-          className="flex flex-col items-center justify-center text-center py-12 border-2 border-dashed border-zinc-200 rounded-xl bg-zinc-50 cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition-colors group"
-        >
-          <Plus
-            size={22}
-            className="text-zinc-300 group-hover:text-amber-400 transition-colors mb-2"
-          />
-          <p className="text-sm font-semibold text-zinc-500 group-hover:text-amber-600 transition-colors">
-            No items yet — click to add the first one
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {activeItems.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              onEdit={(item) => setItemDrawer({ open: true, editing: item })}
-              onDelete={handleDeleteItem}
-              isDeleting={isDeletingItem && deletingItemId === item.id}
-            />
-          ))}
-          {/* Add more items */}
-          <button
-            onClick={() => setItemDrawer({ open: true, editing: null })}
-            className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-zinc-200 hover:border-amber-400 text-zinc-400 hover:text-amber-500 rounded-xl py-4 text-sm font-semibold transition-colors"
-          >
-            <Plus size={15} />
-            Add another item
-          </button>
-        </div>
-      )}
-
-      {/* Category modal */}
-      <CategoryModal
-        isOpen={categoryModal.open}
-        onClose={() => setCategoryModal({ open: false, editing: null })}
-        onSubmit={
-          categoryModal.editing ? handleUpdateCategory : handleCreateCategory
-        }
-        isLoading={
-          categoryModal.editing ? isUpdatingCategory : isCreatingCategory
-        }
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+            {activeItems.map(item => (
+              <MenuItemCard 
+                key={item.id} 
+                item={item} 
+                onEdit={() => setItemDrawer({ open: true, editing: item })}
+                onStatusChange={(status) => handleUpdateItemStatus(item.id, status)}
+                isUpdating={isUpdatingStatus && updatingStatusId === item.id}
+              />
+            ))}
+          </div>
+        )}
+      </main>
+      
+      <CategoryModal isOpen={categoryModal.open} onClose={() => setCategoryModal({ open: false, editing: null })}
+        onSubmit={categoryModal.editing ? (p) => updateCategory({id: categoryModal.editing!.id, payload: p}) : createCategory}
+        isLoading={isCreatingCategory || isUpdatingCategory}
         editingCategory={categoryModal.editing}
       />
-
-      {/* Item drawer */}
-      <ItemDrawer
-        isOpen={itemDrawer.open}
-        onClose={() => setItemDrawer({ open: false, editing: null })}
-        onSubmit={itemDrawer.editing ? handleUpdateItem : handleCreateItem}
-        isLoading={itemDrawer.editing ? isUpdatingItem : isCreatingItem}
+      <ItemDrawer isOpen={itemDrawer.open} onClose={() => setItemDrawer({ open: false, editing: null })}
+        onSubmit={itemDrawer.editing ? (p) => updateItem({id: itemDrawer.editing!.id, payload: p}) : createItem}
+        isLoading={isCreatingItem || isUpdatingItem}
         categories={categories}
         editingItem={itemDrawer.editing}
-        defaultCategoryId={activeCategoryId ?? undefined}
+        defaultCategoryId={activeCategory?.id ?? undefined}
       />
     </div>
   );
 }
 
-// useSearchParams requires Suspense boundary in Next.js app router
 export default function VendorMenuPage() {
   return (
-    <React.Suspense
-      fallback={
-        <div className="p-6 lg:p-10">
-          <div className="h-8 w-48 bg-zinc-100 rounded-lg animate-pulse mb-4" />
-          <div className="flex gap-2">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-10 w-28 bg-zinc-100 rounded-full animate-pulse"
-              />
-            ))}
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Loader2 className="animate-spin text-amber-500" size={32}/></div>}>
       <VendorMenuPageInner />
-    </React.Suspense>
+    </Suspense>
   );
 }

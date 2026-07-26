@@ -2,5 +2,5 @@
 import { redirect } from 'next/navigation';
 
 export default function BuyerAccountPage() {
-  redirect('/buyer/account/profile');
+  redirect('/buyer/account/overview');
 }

@@ -3,16 +3,18 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, ShoppingBag, MapPin, Settings, LogOut } from 'lucide-react';
+import { User, ShoppingBag, List, MapPin, Settings, LogOut } from 'lucide-react';
 import { useProfileQuery } from '@/features/Auth/hooks/useProfileQuery';
 import { useAuthMutation } from '@/features/Auth/hooks/useAuthMutation';
 import { LogoutConfirmModal } from './LogoutConfirmModal';
 
 const NAV_ITEMS = [
-  { label: 'Profile',    href: '/buyer/account/profile',   icon: User },
+  {label: "Overview", href: "/buyer/account/overview", icon: List},
   { label: 'Orders',     href: '/buyer/account/orders',    icon: ShoppingBag },
   { label: 'Addresses',  href: '/buyer/account/addresses', icon: MapPin },
-  { label: 'Settings',   href: '/buyer/account/settings',  icon: Settings },
+    { label: 'Profile',    href: '/buyer/account/profile',   icon: User },
+
+  // { label: 'Settings',   href: '/buyer/account/settings',  icon: Settings },
 ];
 
 function getInitials(firstName?: string, lastName?: string): string {

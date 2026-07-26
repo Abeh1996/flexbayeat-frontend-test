@@ -1,8 +1,8 @@
 // src/features/Buyer/components/account/LogoutConfirmModal.tsx
-'use client';
-import React from 'react';
-import { Loader2 } from 'lucide-react';
-import {motion, AnimatePresence} from 'framer-motion';
+"use client";
+import React from "react";
+import { Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface LogoutConfirmModalProps {
   open: boolean;
@@ -11,7 +11,12 @@ interface LogoutConfirmModalProps {
   isLoading: boolean;
 }
 
-export function LogoutConfirmModal({ open, onCancel, onConfirm, isLoading }: LogoutConfirmModalProps) {
+export function LogoutConfirmModal({
+  open,
+  onCancel,
+  onConfirm,
+  isLoading,
+}: LogoutConfirmModalProps) {
   if (!open) return null;
 
   return (
@@ -33,7 +38,6 @@ export function LogoutConfirmModal({ open, onCancel, onConfirm, isLoading }: Log
         exit={{ opacity: 0 }}
       >
         <div className="w-full max-w-sm bg-white border border-zinc-200">
-
           {/* Header */}
           <div className="px-6 py-5 border-b border-zinc-100">
             <h2 className="text-base font-black uppercase tracking-tight text-zinc-900">
@@ -54,7 +58,7 @@ export function LogoutConfirmModal({ open, onCancel, onConfirm, isLoading }: Log
               type="button"
               onClick={onCancel}
               disabled={isLoading}
-              className="flex-1 py-3 border border-zinc-300 text-sm font-bold uppercase tracking-widest text-zinc-600 hover:bg-zinc-50 transition-colors duration-150 disabled:opacity-50"
+              className="flex-1 py-3 border border-zinc-300 text-sm font-bold uppercase tracking-widest text-zinc-600 hover:bg-zinc-50 transition-colors duration-150 disabled:opacity-40"
             >
               Cancel
             </button>
@@ -64,13 +68,15 @@ export function LogoutConfirmModal({ open, onCancel, onConfirm, isLoading }: Log
               disabled={isLoading}
               className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white text-sm font-bold uppercase tracking-widest transition-colors duration-150"
             >
-              {isLoading
-                ? <><Loader2 size={14} className="animate-spin" /> Signing out...</>
-                : 'Sign out'
-              }
+              {isLoading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Signing out...
+                </>
+              ) : (
+                "Sign out"
+              )}
             </button>
           </div>
-
         </div>
       </motion.div>
     </>

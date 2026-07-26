@@ -4,14 +4,17 @@ import { useQuery } from '@tanstack/react-query';
 import { addressFetchEngine } from '../services/fetchEngine';
 import { Address } from '../types';
 import Cookies from 'js-cookie';
+import { useProfileQuery } from '@/features/Auth/hooks/useProfileQuery';
 
 export function useAddressesQuery() {
+  const {user} = useProfileQuery();
   const hasToken = !!Cookies.get('fb_session');
+  const isBuyer = user?.role === 'BUYER';
 
   const query = useQuery<Address[]>({
     queryKey: ['addresses'],
     queryFn: addressFetchEngine.getAll,
-    enabled: hasToken,
+    enabled: hasToken && isBuyer,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
   });

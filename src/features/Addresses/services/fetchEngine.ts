@@ -1,11 +1,12 @@
 // src/features/Addresses/services/fetchEngine.ts
-import { api } from '@/lib/api';
-import { API_ROUTES } from '@/lib/endpoints';
-import { Address, AddressPayload } from '../types';
+import { api } from "@/lib/api";
+import { API_ROUTES } from "@/lib/endpoints";
+import { Address, AddressPayload } from "../types";
 
 export const addressFetchEngine = {
   getAll: async (): Promise<Address[]> => {
     const res = await api.get<Address[]>(API_ROUTES.addresses.getAll);
+    console.log("Fetched addresses", res.data);
     return res.data;
   },
 
@@ -19,8 +20,14 @@ export const addressFetchEngine = {
     return res.data;
   },
 
-  update: async (id: string, payload: Partial<AddressPayload>): Promise<Address> => {
-    const res = await api.patch<Address>(API_ROUTES.addresses.update(id), payload);
+  update: async (
+    id: string,
+    payload: Partial<AddressPayload>,
+  ): Promise<Address> => {
+    const res = await api.patch<Address>(
+      API_ROUTES.addresses.update(id),
+      payload,
+    );
     return res.data;
   },
 

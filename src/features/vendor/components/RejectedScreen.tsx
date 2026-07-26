@@ -1,11 +1,11 @@
 // src/features/Vendor/components/RejectedScreen.tsx
-'use client';
-import React, { useState } from 'react';
-import { XCircle, RotateCcw, LogOut } from 'lucide-react';
-import { useAuthMutation } from '@/features/Auth/hooks/useAuthMutation';
-import { useVendorMutation } from '../hooks/useVendorMutation';
-import { VendorRegistrationForm } from './VendorRegistrationForm';
-import { VendorProfilePayload } from '../types';
+"use client";
+import React, { useState } from "react";
+import { XCircle, RotateCcw, LogOut } from "lucide-react";
+import { useAuthMutation } from "@/features/Auth/hooks/useAuthMutation";
+import { useVendorMutation } from "../hooks/useVendorMutation";
+import { VendorRegistrationForm } from "./VendorRegistrationForm";
+import { VendorProfilePayload } from "../types";
 
 interface RejectedScreenProps {
   rejectionReason?: string;
@@ -96,10 +96,10 @@ export function RejectedScreen({ rejectionReason }: RejectedScreenProps) {
         <button
           onClick={() => logout()}
           disabled={isLoggingOut}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-zinc-600 uppercase tracking-widest transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-zinc-600 uppercase tracking-widest transition-colors disabled:opacity-40"
         >
           <LogOut size={13} />
-          {isLoggingOut ? 'Logging out…' : 'Log out'}
+          {isLoggingOut ? "Logging out…" : "Log out"}
         </button>
       </div>
     </div>

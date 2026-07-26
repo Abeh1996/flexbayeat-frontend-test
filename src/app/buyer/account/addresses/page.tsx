@@ -19,6 +19,8 @@ export default function AddressesPage() {
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // console.log('AddressesPage render', { addresses, isLoadingAddresses, isErrorAddresses });
+
   const openAdd = () => {
     setEditingAddress(null);
     setDrawerMode('add');

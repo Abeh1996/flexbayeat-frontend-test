@@ -1,171 +1,210 @@
-// src/app/vendor/(dashboard)/dashboard/page.tsx
 'use client';
 import React from 'react';
 import Link from 'next/link';
 import {
-  Star,
-  ShoppingBag,
-  Wallet,
-  FileCheck,
   ArrowRight,
+  BarChart2,
+  CheckCircle,
   Clock,
-  MapPin,
+  DollarSign,
+  Loader2,
+  Package,
+  Star,
+  Users,
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 import { useVendorProfileQuery } from '@/features/vendor/hooks/useVendorProfileQuery';
+import {
+  useActiveOrdersQuery,
+  useOrderHistoryQuery,
+} from '@/features/vendor/hooks/useOrdersQuery';
+import { Order } from '@/features/vendor/types/orders.types';
+import { format } from 'date-fns';
 
-const PAYOUT_LABEL: Record<string, string> = {
-  DAILY: 'Daily',
-  WEEKLY: 'Weekly',
-  MONTHLY: 'Monthly',
-};
+const StatCard = ({
+  icon: Icon,
+  title,
+  value,
+  description,
+  isLoading,
+  color = 'bg-amber-500',
+}: {
+  icon: React.ElementType;
+  title: string;
+  value: string | number;
+  description: string;
+  isLoading?: boolean;
+  color?: string;
+}) => (
+  <div className="bg-white p-6 rounded-lg shadow-sm border border-stone-200/80">
+    <div className="flex items-start justify-between">
+      <div className={`p-3 rounded-md ${color}`}>
+        <Icon size={22} className="text-white" />
+      </div>
+      {isLoading && <Loader2 size={20} className="animate-spin text-stone-400" />}
+    </div>
+    <div className="mt-4">
+      <p className="text-3xl font-bold text-stone-800">{isLoading ? '...' : value}</p>
+      <h3 className="text-sm font-semibold text-stone-500 mt-1">{title}</h3>
+      <p className="text-xs text-stone-400 mt-2">{description}</p>
+    </div>
+  </div>
+);
+
+const RecentOrderRow = ({ order }: { order: Order }) => (
+  <div className="flex items-center justify-between py-3 px-1">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-stone-100 rounded-md">
+        <Package size={18} className="text-stone-500" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-stone-700">Order #{order.orderNumber?.slice(-6)}</p>
+        <p className="text-xs text-stone-500">
+          {(order.orderItems?.length || 0)} item(s) &bull;{' '}
+          {format(new Date(order.createdAt), 'MMM d, h:mm a')}
+        </p>
+      </div>
+    </div>
+    <div className="text-right">
+      <p className="text-sm font-bold text-stone-800">{Number(order.total).toLocaleString()} XAF</p>
+      <span className="text-xs font-semibold capitalize px-2 py-1 rounded-full bg-amber-100 text-amber-700">
+        {order.status.toLowerCase()}
+      </span>
+    </div>
+  </div>
+);
 
 export default function VendorOverviewPage() {
   const { vendorProfile, isLoadingVendorProfile } = useVendorProfileQuery();
+  const { activeOrders, isLoadingActiveOrders } = useActiveOrdersQuery();
+  const { orderHistory, isLoadingHistory } = useOrderHistoryQuery();
 
-  console.log("vendor profile", vendorProfile);
+  const totalOrders = (activeOrders?.length || 0) + (orderHistory?.length || 0);
+  const walletBalance = vendorProfile?.wallet?.balance ?? 0;
 
-  if (isLoadingVendorProfile || !vendorProfile) {
-    return (
-      <div className="p-6 lg:p-10 space-y-4">
-        <div className="h-24 bg-zinc-100 animate-pulse" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 bg-zinc-100 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Mock sales data for the chart for UI purposes
+  // const salesData = [
+  //   { name: 'Mon', revenue: 4000 },
+  //   { name: 'Tue', revenue: 3000 },
+  //   { name: 'Wed', revenue: 2000 },
+  //   { name: 'Thu', revenue: 2780 },
+  //   { name: 'Fri', revenue: 1890 },
+  //   { name: 'Sat', revenue: 2390 },
+  //   { name: 'Sun', revenue: 3490 },
+  // ];
 
-  const {
-    businessName,
-    averageRating,
-    totalReviews,
-    totalOrders,
-    commissionRate,
-    payoutSchedule,
-    documentsVerified,
-    city,
-    region,
-    wallet,
-    status
-  } = vendorProfile;
-
-  const ratingValue = parseFloat(averageRating) || 0;
-  const commissionPercent = (parseFloat(commissionRate) * 100).toFixed(0);
+  const isLoading = isLoadingVendorProfile || isLoadingActiveOrders || isLoadingHistory;
 
   return (
-    <div className="p-6 lg:p-10 space-y-8">
-      {/* Welcome */}
-      <div>
-        <h2 className="text-lg font-black uppercase tracking-tight text-zinc-900">
-          Welcome back, {businessName}
-        </h2>
-        <p className="text-sm font-medium text-zinc-500 mt-1 flex items-center gap-1.5">
-          {city && region ? (
-            <>
-              <MapPin size={13} className="text-zinc-400" />
-              {city}, {region}
-            </>
-          ) : (
-            'Here is how your business is doing'
-          )}
+    <div className="p-6 lg:p-8 bg-stone-50 min-h-full">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-stone-800">
+          Welcome back, {vendorProfile?.businessName || '...'}!
+        </h1>
+        <p className="text-stone-500 mt-1">
+          Here's a snapshot of your business performance.
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="border border-zinc-200 bg-white p-5">
-          <div className="flex items-center gap-2 text-zinc-400 mb-3">
-            <Star size={14} />
-            <span className="text-xs font-semibold uppercase tracking-widest">Rating</span>
-          </div>
-          <p className="text-2xl font-black text-zinc-900">
-            {ratingValue > 0 ? ratingValue.toFixed(1) : '—'}
-          </p>
-          <p className="text-xs font-medium text-zinc-400 mt-1">
-            {totalReviews} review{totalReviews === 1 ? '' : 's'}
-          </p>
-        </div>
-
-        <div className="border border-zinc-200 bg-white p-5">
-          <div className="flex items-center gap-2 text-zinc-400 mb-3">
-            <ShoppingBag size={14} />
-            <span className="text-xs font-semibold uppercase tracking-widest">Orders</span>
-          </div>
-          <p className="text-2xl font-black text-zinc-900">{totalOrders}</p>
-          <p className="text-xs font-medium text-zinc-400 mt-1">Total orders received</p>
-        </div>
-
-        <div className="border border-zinc-200 bg-white p-5">
-          <div className="flex items-center gap-2 text-zinc-400 mb-3">
-            <Wallet size={14} />
-            <span className="text-xs font-semibold uppercase tracking-widest">Wallet Balance</span>
-          </div>
-          <p className="text-2xl font-black text-zinc-900">
-            {wallet ? `${wallet.balance.toLocaleString()} ${wallet.currency ?? 'XAF'}` : '0 XAF'}
-          </p>
-          <p className="text-xs font-medium text-zinc-400 mt-1">
-            {PAYOUT_LABEL[payoutSchedule] ?? payoutSchedule} payouts
-          </p>
-        </div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <StatCard
+          icon={DollarSign}
+          title="Wallet Balance"
+          value={`${walletBalance.toLocaleString()} XAF`}
+          description="Your current earnings"
+          isLoading={isLoadingVendorProfile}
+          color="bg-green-500"
+        />
+        <StatCard
+          icon={Package}
+          title="Total Orders"
+          value={totalOrders}
+          description="Active and completed orders"
+          isLoading={isLoading}
+          color="bg-blue-500"
+        />
+        <StatCard
+          icon={Clock}
+          title="Active Orders"
+          value={activeOrders?.length || 0}
+          description="Orders needing processing"
+          isLoading={isLoadingActiveOrders}
+          color="bg-amber-500"
+        />
+        <StatCard
+          icon={Star}
+          title="Average Rating"
+          value={parseFloat(vendorProfile?.averageRating || '0').toFixed(1)}
+          description={`${vendorProfile?.totalReviews || 0} reviews`}
+          isLoading={isLoadingVendorProfile}
+          color="bg-indigo-500"
+        />
       </div>
 
-      {/* Account details */}
-      <div className="border border-zinc-200 bg-white">
-        <div className="px-5 py-4 border-b border-zinc-200">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">
-            Account Details
-          </h3>
-        </div>
-        <div className="divide-y divide-zinc-100">
-          <div className="flex items-center justify-between px-5 py-3.5">
-            <span className="text-sm font-medium text-zinc-500">Commission rate</span>
-            <span className="text-sm font-bold text-zinc-900">{commissionPercent}%</span>
+      {/* Main Content */}
+      <div className="grid grid-cols-1  gap-6 mt-8">
+        {/* Sales Chart */}
+        {/* <div className="xl:col-span-2 bg-white p-6 rounded-lg shadow-sm border border-stone-200/80">
+          <h3 className="text-lg font-semibold text-stone-800 mb-4">Weekly Revenue</h3>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <BarChart data={salesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(245, 158, 11, 0.1)' }}
+                  contentStyle={{
+                    borderRadius: '0.5rem',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                    border: '1px solid #e5e7eb',
+                  }}
+                />
+                <Legend iconType="circle" iconSize={8} />
+                <Bar dataKey="revenue" fill="#f59e0b" name="Revenue" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <div className="flex items-center justify-between px-5 py-3.5">
-            <span className="text-sm font-medium text-zinc-500">Payout schedule</span>
-            <span className="text-sm font-bold text-zinc-900">
-              {PAYOUT_LABEL[payoutSchedule] ?? payoutSchedule}
-            </span>
-          </div>
-          <div className="flex items-center justify-between px-5 py-3.5">
-            <span className="text-sm font-medium text-zinc-500">Account status</span>
-            <span
-              className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest ${
-                documentsVerified ? 'text-emerald-600' : 'text-amber-500'
-              }`}
+        </div> */}
+
+        {/* Recent Active Orders */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-stone-200/80">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-stone-800">Active Orders</h3>
+            <Link
+              href="/vendor/dashboard/orders"
+              className="text-sm font-semibold text-amber-600 hover:underline"
             >
-              <FileCheck size={13} />
-              {status}
-            </span>
+              View all
+            </Link>
+          </div>
+          <div className="divide-y divide-stone-100">
+            {isLoadingActiveOrders ? (
+              <div className="flex justify-center items-center h-48">
+                <Loader2 size={24} className="animate-spin text-stone-400" />
+              </div>
+            ) : activeOrders && activeOrders.length > 0 ? (
+              activeOrders.slice(0, 5).map((order) => (
+                <RecentOrderRow key={order.id} order={order} />
+              ))
+            ) : (
+              <div className="text-center py-10">
+                <p className="text-sm text-stone-500">No active orders right now.</p>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Quick links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link
-          href="/vendor/dashboard/menu"
-          className="group flex items-center justify-between border border-zinc-200 bg-white px-5 py-4 hover:border-amber-400 transition-colors"
-        >
-          <div>
-            <p className="text-sm font-bold text-zinc-900">Manage your menu</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Add categories and items</p>
-          </div>
-          <ArrowRight size={16} className="text-zinc-300 group-hover:text-amber-500 transition-colors" />
-        </Link>
-
-        <Link
-          href="/vendor/dashboard/settings"
-          className="group flex items-center justify-between border border-zinc-200 bg-white px-5 py-4 hover:border-amber-400 transition-colors"
-        >
-          <div>
-            <p className="text-sm font-bold text-zinc-900">Set operating hours</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Let customers know when you're open</p>
-          </div>
-          <Clock size={16} className="text-zinc-300 group-hover:text-amber-500 transition-colors" />
-        </Link>
       </div>
     </div>
   );

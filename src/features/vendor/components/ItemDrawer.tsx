@@ -13,12 +13,10 @@ import {
   Clock,
   Package,
 } from "lucide-react";
-import {
-  MenuCategory,
+import { MenuCategory,
   MenuItem,
   CreateMenuItemPayload,
-  MenuItemStatus,
-} from "../types/menu.types";
+  MenuItemStatus, } from "../types/menu.types";
 
 const STATUS_OPTIONS: { value: MenuItemStatus; label: string }[] = [
   { value: "AVAILABLE", label: "Available" },
@@ -30,25 +28,20 @@ const schema = z.object({
   menuCategoryId: z.string().min(1, "Category is required"),
   name: z.string().min(1, "Item name is required"),
   description: z.string().optional(),
-  price: z.preprocess(
-    (val) => Number(val),
-    z.number({ invalid_type_error: "Price is required" }).min(0),
-  ),
-  stockCount: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
-    z.number().optional(),
-  ),
-  preparationTimeMin: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
-    z.number().optional(),
-  ),
+  price: z
+    .number({ error: "Price is required" })
+    .min(0, "Price must be 0 or more"),
+  stockCount: z.number().optional(),
+  preparationTimeMin: z.number().optional(),
   isSpicy: z.boolean().default(false),
   isVegetarian: z.boolean().default(false),
   status: z.enum(["AVAILABLE", "OUT_OF_STOCK", "HIDDEN"]).default("AVAILABLE"),
-  image: z.instanceof(File).optional(),
 });
+// image handled outside RHF — File instances get stripped by Zod resolver
 
 type FormValues = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormOutput = z.output<typeof schema>;
 
 const inputCls = (err?: boolean) =>
   `w-full px-4 py-3 bg-white border rounded-md text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
@@ -81,6 +74,7 @@ export function ItemDrawer({
 }: ItemDrawerProps) {
   const isEditing = !!editingItem;
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageFileRef = useRef<File | null>(null); // stored outside RHF — Zod strips File instances
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const {
@@ -90,7 +84,7 @@ export function ItemDrawer({
     setValue,
     watch,
     formState: { errors },
-  } = useForm<FormValues>({
+  } = useForm<FormInput, any, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: {
       isSpicy: false,
@@ -108,7 +102,7 @@ export function ItemDrawer({
         menuCategoryId: editingItem.menuCategoryId,
         name: editingItem.name,
         description: editingItem.description ?? "",
-        price: editingItem.price,
+        price: Number(editingItem.price),
         stockCount: editingItem.stockCount ?? undefined,
         preparationTimeMin: editingItem.preparationTimeMin ?? undefined,
         isSpicy: editingItem.isSpicy,
@@ -127,32 +121,30 @@ export function ItemDrawer({
         status: "AVAILABLE",
       });
       setImagePreview(null);
+      imageFileRef.current = null;
     }
   }, [editingItem, defaultCategoryId, reset]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setValue("image", file, { shouldValidate: true });
+    imageFileRef.current = file; // store directly, bypass RHF/Zod
     setImagePreview(URL.createObjectURL(file));
   };
 
-  const handleFormSubmit = (values: FormValues) => {
+  const handleFormSubmit = (values: FormOutput) => {
     onSubmit({
       menuCategoryId: values.menuCategoryId,
       name: values.name,
       description: values.description,
-      price: values.price, // Now a number
-      stockCount: values.stockCount, // Now a number or undefined
-      preparationTimeMin: values.preparationTimeMin, // Now a number or undefined
+      price: values.price,
+      stockCount: values.stockCount,
+      preparationTimeMin: values.preparationTimeMin,
       isSpicy: values.isSpicy,
       isVegetarian: values.isVegetarian,
-      ...(isEditing && { status: values.status }), // Conditionally add status only when editing
       sortOrder: undefined,
-      image: values.image,
+      image: imageFileRef.current ?? undefined, // read from ref, not RHF
     });
-
-    console.log("image we sending", values.image);
   };
 
   return (

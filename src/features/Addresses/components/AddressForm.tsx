@@ -32,11 +32,11 @@ const schema = z.object({
   addressLine2: z.string().optional(),
   city: z.string().min(1, 'City is required'),
   region: z.string().min(1, 'Region is required'),
-  country: z.string().default('CMR'),
-  latitude: z.number({ required_error: 'Select an address from suggestions' }),
-  longitude: z.number({ required_error: 'Select an address from suggestions' }),
+  country: z.string(),
+  latitude: z.number({ message: 'Select an address from suggestions' }),
+  longitude: z.number({ message: 'Select an address from suggestions' }),
   deliveryInstructions: z.string().optional(),
-  isDefault: z.boolean().default(false),
+  isDefault: z.boolean(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -70,19 +70,19 @@ export function AddressForm({
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      country: 'CMR',
-      isDefault: false,
-      ...defaultValues,
-    },
-  });
+  register,
+  handleSubmit,
+  setValue,
+  watch,
+  formState: { errors },
+} = useForm<FormValues>({
+  resolver: zodResolver(schema),
+  defaultValues: {
+    country: 'CMR',
+    isDefault: false,
+    ...defaultValues,
+  },
+});
 
   const lat = watch('latitude');
   const lng = watch('longitude');

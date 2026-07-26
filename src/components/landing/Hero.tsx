@@ -12,7 +12,7 @@ const Hero: React.FC = () => {
           <div className="col-span-1 lg:col-span-5 order-first lg:order-last flex justify-center items-center">
             <div className="w-full max-w-[340px] sm:max-w-[450px] lg:max-w-full md:aspect-square relative flex items-center justify-center">
               <img
-                src="/images/hero3.png"
+                src="/images/hero-image.png"
                 alt="Premium roasted chicken and seasoned fried rice"
                 className="w-full h-auto object-contain select-none filter drop-shadow-[0_24px_48px_rgba(180,83,9,0.18)]"
                 loading="eager"

@@ -1,37 +1,54 @@
 'use client';
 
-import React, { ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { useProfileQuery } from '@/features/Auth/hooks/useProfileQuery';
 import { useRouter } from 'next/navigation';
 import LoadingScreen from './loading';
+import Header from '@/components/landing/Header';
+import Footer from '@/components/landing/Footer';
+import Newsletter from '@/components/landing/Newsletter';
 
-const MainLayout = ({children}: {children: ReactNode}) => {
-    const {user, isLoadingProfile} = useProfileQuery();
-    const router = useRouter();
+const ROLE_REDIRECTS: Record<string, string> = {
+  VENDOR: '/vendor/dashboard',
+  RIDER: '/rider/dashboard',
+  ADMIN: '/admin/dashboard',
+};
 
-    useEffect(() => {
-    if (!isLoadingProfile && user) {
-      router.replace(`/vendor/dashboard`);
+const MainLayout = ({ children }: { children: ReactNode }) => {
+  const { user, isLoadingProfile } = useProfileQuery();
+  const router = useRouter();
+  
+  // Safe hydration mount check
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || isLoadingProfile || !user) return;
+
+    const redirectTo = ROLE_REDIRECTS[user.role];
+    if (redirectTo) {
+      router.replace(redirectTo);
     }
-    if(user && user?.role === "RIDER") {
-      router.push("/rider/dashboard")
-    }
-  }, [user, isLoadingProfile, router]);
+  }, [user, isLoadingProfile, router, isMounted]);
 
+  const isNonBuyer = !!user && user.role !== 'BUYER';
+  const showLoader = !isMounted || isLoadingProfile || isNonBuyer;
 
-    if(isLoadingProfile){
-      <LoadingScreen />
-    }
-
-    if(user && (user.role != "BUYER")){
-        <LoadingScreen />
-    }
-
+  // We ALWAYS return the same base HTML wrapper shell so the server and client match perfectly.
+  // The content inside the main area adjusts smoothly once the browser mounts.
   return (
     <div>
-      {children}
+      <Header />
+      <main className="min-h-[60vh]">
+        {showLoader ? <LoadingScreen /> : children}
+      </main>
+      <Newsletter />
+      <Footer />
     </div>
-  )
-}
+  );
+};
 
-export default MainLayout
+export default MainLayout;

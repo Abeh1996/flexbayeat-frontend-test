@@ -10,6 +10,7 @@ import {
   Search,
   ChevronRight,
 } from "lucide-react";
+import Link from "next/link";
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -66,19 +67,20 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           {/* Navigation Links */}
           <nav className="p-2 space-y-1">
             {[
-              { label: "Browse Menu", href: "#menu" },
-              { label: "Special Offers", href: "#offers" },
-              { label: "Track Order", href: "#track" },
-              { label: "Become a Partner", href: "#partner" },
+              { label: "Home", href: "/" },
+              { label: "Browse Meals", href: "/meals" },
+              { label: "Browse restaurants", href: "/restaurants" },
+              { label: "Become a vendor", href: "/auth/vendor/login" },
+              { label: "Sign up to deliver", href: "/auth/rider/login" },
             ].map((link) => (
-              <a
+              <Link
                 key={link.label}
                 href={link.href}
                 className="flex items-center justify-between p-3 text-sm font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 rounded-[2px] transition-colors"
               >
                 {link.label}
                 <ChevronRight size={16} className="text-neutral-400" />
-              </a>
+              </Link>
             ))}
           </nav>
         </div>

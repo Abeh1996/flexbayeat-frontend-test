@@ -103,7 +103,7 @@ const RecentOrdersTable = ({
               <tr key={order.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order.orderNumber}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{format(new Date(order.createdAt), 'MMM d, yyyy')}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${parseFloat(order.total).toFixed(2)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{parseFloat(order.total).toFixed(2)} XAF</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :

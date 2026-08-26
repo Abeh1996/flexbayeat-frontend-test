@@ -21,13 +21,6 @@ const ROLE_ROUTES: { prefix: string; role: string }[] = [
 // Auth pages — always public, never redirect even if logged in
 const AUTH_PREFIXES = [
   '/auth/',
-  '/buyer/login',
-  '/buyer/signup',
-  '/vendor/login',
-  '/vendor/signup',
-  '/rider/login',
-  '/rider/signup',
-  '/admin/login',
 ];
 
 // (main) browsing pages — buyers can access freely, others get redirected to their dashboard
@@ -65,9 +58,9 @@ export function proxy(request: NextRequest) {
   // ── 3. Role-owned routes (/vendor/*, /rider/*, /admin/*) ──────────────────
   const ownedRoute = ROLE_ROUTES.find((r) => pathname.startsWith(r.prefix));
   if (ownedRoute) {
-    // Not logged in → send to that role's login
+    // Not logged in → send to that role's login (/auth/<role>/login)
     if (!sessionToken) {
-      const loginUrl = new URL(`/${ownedRoute.role.toLowerCase()}/login`, request.url);
+      const loginUrl = new URL(`/auth/${ownedRoute.role.toLowerCase()}/login`, request.url);
       loginUrl.searchParams.set('next', pathname);
       return NextResponse.redirect(loginUrl);
     }

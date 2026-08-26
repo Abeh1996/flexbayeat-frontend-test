@@ -1,4 +1,4 @@
-// src/app/(auth)/auth/buyer/signup/page.tsx
+// src/app/auth/rider/signup/page.tsx
 "use client";
 import React, { useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -128,7 +128,7 @@ function RiderSignupContent() {
 
           {step === "complete" && (
             <SignUpDetailsForm
-              role={UserRole.BUYER}
+              role={UserRole.RIDER}
               contact={contact}
               method={method}
               redirectTo="/rider/complete-registration"

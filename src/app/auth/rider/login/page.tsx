@@ -1,4 +1,4 @@
-// src/app/(auth)/auth/buyer/login/page.tsx
+// src/app/auth/rider/login/page.tsx
 import { SignInForm } from "@/features/Auth/components/SignInForm";
 
 export default function RiderLoginPage() {

@@ -139,7 +139,7 @@ if (role === 'BUYER') {
       queryFn: riderFetchEngine.getProfile,
     });
     // profile exists — let the dashboard gate decide pending/active/rejected
-    router.replace('/rider/account');
+    router.replace('/rider/dashboard');
   } catch {
     // 404 — no profile submitted yet
     router.replace('/rider/complete-registration');

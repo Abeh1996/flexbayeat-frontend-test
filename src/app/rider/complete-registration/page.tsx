@@ -16,7 +16,7 @@ export default function RiderCompleteRegistrationPage() {
     await createRiderProfileAsync(payload);
     setSubmitted(true);
     setTimeout(() => {
-      router.replace('/rider/account');
+      router.replace('/rider/dashboard');
     }, 5000);
   };
 

@@ -1,83 +1,249 @@
-// src/app/admin/(dashboard)/dashboard/riders/page.tsx
+// src/app/admin/dashboard/riders/page.tsx
 'use client';
 
 import { usePendingRidersQuery } from '@/features/Admin/hooks/usePendingRidersQuery';
-import { PendingRiderCard } from '@/features/Admin/components/PendingRiderCard';
-import { AlertCircle, FileQuestion } from 'lucide-react';
-
-const CardSkeleton = () => (
-    <div className="bg-white border border-zinc-200 p-6">
-        <div className="flex items-start gap-5">
-            <div className="w-12 h-12 bg-zinc-100 animate-pulse rounded-full shrink-0"></div>
-            <div className="flex-1 space-y-2">
-                <div className="w-1/2 h-5 bg-zinc-100 animate-pulse"></div>
-                <div className="w-2/3 h-4 bg-zinc-100 animate-pulse"></div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-                <div className="w-24 h-10 bg-zinc-100 animate-pulse"></div>
-                <div className="w-24 h-10 bg-zinc-100 animate-pulse"></div>
-            </div>
-        </div>
-    </div>
-);
+import { useApprovalMutation } from '@/features/Admin/hooks/useApprovalMutation';
+import { DataTable, StatusBadge, Pagination } from '@/features/Admin/components/DataTable';
+import type { Column } from '@/features/Admin/components/DataTable';
+import type { PendingRider } from '@/features/Admin/types';
+import { Bike, Calendar, FileText, Loader2, Hash } from 'lucide-react';
+import { useState } from 'react';
+import Link from 'next/link';
 
 export default function PendingRidersPage() {
   const { pendingRiders, isLoading, isError, error, refetch } = usePendingRidersQuery();
+  const { approveRider, isApprovingRider, approvingRiderId } = useApprovalMutation();
+  const [actionRider, setActionRider] = useState<PendingRider | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="space-y-4">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-        </div>
-      );
-    }
-
-    if (isError) {
-      return (
-        <div className="bg-white border border-red-200 p-8 text-center">
-            <AlertCircle size={40} className="mx-auto text-red-500" />
-            <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900 mt-4">Failed to load riders</h3>
-            <p className="text-sm font-medium text-red-600 mt-1">{error?.message || 'An unexpected error occurred.'}</p>
-            <button 
-                onClick={() => refetch()}
-                className="mt-4 px-4 py-2 text-sm font-bold text-white bg-zinc-800 uppercase tracking-widest"
-            >
-                Retry
-            </button>
-        </div>
-      );
-    }
-
-    if (pendingRiders.length === 0) {
-      return (
-        <div className="bg-white border border-zinc-200 p-12 text-center">
-            <FileQuestion size={40} className="mx-auto text-zinc-400" />
-            <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900 mt-4">No Pending Riders</h3>
-            <p className="text-sm font-medium text-zinc-600 mt-1">There are currently no new riders awaiting approval.</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        {pendingRiders.map((rider) => (
-          <PendingRiderCard key={rider.id} rider={rider} />
-        ))}
-      </div>
-    );
+  const handleApprove = async (rider: PendingRider) => {
+    await approveRider({ id: rider.id, payload: { approved: true } });
+    setActionRider(null);
+    setActionType(null);
   };
 
-  return (
-    <div>
-        <div className="mb-4">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
-                Awaiting Approval ({pendingRiders?.length || 0})
-            </h2>
+  const handleReject = async (rider: PendingRider) => {
+    if (!rejectionReason || rejectionReason.length < 5) return;
+    await approveRider({ id: rider.id, payload: { approved: false, rejectionReason } });
+    setActionRider(null);
+    setActionType(null);
+    setRejectionReason('');
+  };
+
+  const columns: Column<PendingRider>[] = [
+    {
+      key: 'rider',
+      label: 'Rider',
+      render: (r) => (
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
+            <span className="text-xs font-bold text-zinc-500">
+              {r.userId?.slice(0, 2).toUpperCase() || 'R'}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-zinc-800 truncate">
+              Rider {r.userId?.slice(0, 8) || '—'}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <span className="capitalize flex items-center gap-0.5">
+                <Bike size={10} className="shrink-0" /> {r.vehicleType?.toLowerCase()}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <Hash size={10} className="shrink-0" /> {r.vehiclePlate}
+              </span>
+            </div>
+          </div>
         </div>
-        {renderContent()}
+      ),
+    },
+    {
+      key: 'vehicle',
+      label: 'Vehicle',
+      hideOnMobile: true,
+      render: (r) => (
+        <span className="text-sm text-zinc-700 capitalize">{r.vehicleModel || '—'}</span>
+      ),
+    },
+    {
+      key: 'submitted',
+      label: 'Submitted',
+      hideOnMobile: true,
+      render: (r) => (
+        <div className="flex items-center gap-1.5">
+          <Calendar size={11} className="text-zinc-400 shrink-0" />
+          <span className="text-sm text-zinc-500">{new Date(r.createdAt).toLocaleDateString()}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'docs',
+      label: 'Docs',
+      hideOnMobile: true,
+      render: (r) => (
+        <div className="flex items-center gap-2">
+          {r.nationalId && (
+            <Link href={r.nationalId} target="_blank" onClick={(e) => e.stopPropagation()} className="text-xs font-medium text-amber-600 hover:underline flex items-center gap-1">
+              <FileText size={11} /> ID
+            </Link>
+          )}
+          {r.license && (
+            <Link href={r.license} target="_blank" onClick={(e) => e.stopPropagation()} className="text-xs font-medium text-amber-600 hover:underline flex items-center gap-1">
+              <FileText size={11} /> Lic
+            </Link>
+          )}
+          {!r.nationalId && !r.license && <span className="text-xs text-zinc-400">—</span>}
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (r) => <StatusBadge status={r.status || 'PENDING_APPROVAL'} />,
+    },
+    {
+      key: 'actions',
+      label: '',
+      className: 'text-right',
+      render: (r) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); setActionRider(r); setActionType('approve'); }}
+            disabled={isApprovingRider && approvingRiderId === r.id}
+            className="px-3 py-1.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 disabled:opacity-40 transition-colors"
+          >
+            {isApprovingRider && approvingRiderId === r.id ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              'Approve'
+            )}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setActionRider(r); setActionType('reject'); setRejectionReason(''); }}
+            className="px-3 py-1.5 text-[10px] font-semibold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+          >
+            Reject
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-zinc-900">Rider Approvals</h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            {isLoading ? '…' : `${pendingRiders.length} rider${pendingRiders.length !== 1 ? 's' : ''} awaiting review`}
+          </p>
+        </div>
+        <button
+          onClick={() => refetch()}
+          className="px-3 py-1.5 text-xs font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+
+      {isError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-start gap-3">
+          <div>
+            <p className="text-sm font-bold text-red-700">Failed to load riders</p>
+            <p className="text-xs text-red-600 mt-0.5">{error?.message}</p>
+            <button onClick={() => refetch()} className="mt-2 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      <DataTable
+        columns={columns}
+        data={isLoading ? [] : pendingRiders}
+        loading={isLoading}
+        emptyMessage="No riders pending approval. All caught up!"
+        keyExtractor={(r) => r.id}
+        skeletonCount={4}
+        onRowClick={(r) => { setActionRider(r); setActionType('approve'); }}
+      />
+
+      {/* Approve modal */}
+      {actionRider && actionType === 'approve' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-zinc-100">
+              <h3 className="text-sm font-bold text-zinc-900">Approve Rider</h3>
+              <p className="text-xs text-zinc-500 mt-0.5">{actionRider.vehiclePlate} · {actionRider.vehicleType?.toLowerCase()}</p>
+            </div>
+            <div className="p-5 text-sm text-zinc-700">
+              <p>This rider will be approved and can start accepting deliveries immediately.</p>
+            </div>
+            <div className="px-5 py-4 border-t border-zinc-100 flex items-center justify-end gap-2">
+              <button
+                onClick={() => { setActionRider(null); setActionType(null); }}
+                className="px-4 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleApprove(actionRider)}
+                disabled={isApprovingRider}
+                className="px-4 py-2 text-xs font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              >
+                {isApprovingRider && <Loader2 size={12} className="animate-spin" />}
+                Confirm Approval
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject modal */}
+      {actionRider && actionType === 'reject' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-zinc-100">
+              <h3 className="text-sm font-bold text-zinc-900">Reject Rider</h3>
+              <p className="text-xs text-zinc-500 mt-0.5">{actionRider.vehiclePlate} · {actionRider.vehicleType?.toLowerCase()}</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 block mb-1">
+                  Rejection Reason
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 text-zinc-700 placeholder:text-zinc-400 resize-none"
+                  placeholder="Explain why this rider is being rejected…"
+                />
+                {rejectionReason.length > 0 && rejectionReason.length < 5 && (
+                  <p className="text-xs text-red-500 mt-1">Reason must be at least 5 characters</p>
+                )}
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-zinc-100 flex items-center justify-end gap-2">
+              <button
+                onClick={() => { setActionRider(null); setActionType(null); }}
+                className="px-4 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReject(actionRider)}
+                disabled={isApprovingRider || rejectionReason.length < 5}
+                className="px-4 py-2 text-xs font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              >
+                {isApprovingRider && <Loader2 size={12} className="animate-spin" />}
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

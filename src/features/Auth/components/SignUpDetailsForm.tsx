@@ -49,10 +49,12 @@ export function SignUpDetailsForm({
 
   useEffect(() => {
     checkOtpVerifiedAction().then((ok) => {
-      if (!ok) router.replace("/auth/buyer/signup");
-      else setVerified(true);
+      if (!ok) {
+        const rolePath = role === UserRole.RIDER ? 'rider' : role === UserRole.VENDOR ? 'vendor' : 'buyer';
+        router.replace(`/auth/${rolePath}/signup`);
+      } else setVerified(true);
     });
-  }, [router]);
+  }, [router, role]);
 
   const {
     register,

@@ -1,0 +1,2 @@
+- [feedback-ui-quality-standards.md](feedback-ui-quality-standards.md) — UI quality feedback — no generic AI slop, proper OG dashboards
+- [data-alignment-backend-rider.md](data-alignment-backend-rider.md) — Backend data shape mismatches + known issues (isAvailable, decline deliveryId)

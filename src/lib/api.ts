@@ -29,9 +29,9 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    if (!(config.data instanceof FormData)) {
-      config.headers['Content-Type'] = 'application/json';
-    }
+    // if (!(config.data instanceof FormData)) {
+    //   config.headers['Content-Type'] = 'application/json';
+    // }
     return config;
   },
   (error: AxiosError): Promise<never> => Promise.reject(error),
@@ -94,9 +94,34 @@ function logoutUser() {
   }
 }
 
+// ── Dev-only response logger ──────────────────────────────────────────────────
+function logApiResponse(response: AxiosResponse) {
+  if (process.env.NODE_ENV !== 'development') return;
+  const { config, status, data } = response;
+  const url = config.url ?? '?';
+  const method = (config.method ?? 'get').toUpperCase();
+  const preview = JSON.stringify(data).slice(0, 400);
+  console.log(
+    `%c[API] ${method} ${url} → ${status}`,
+    'color: #22c55e; font-weight: 600;',
+    '\n',
+    data,
+  );
+  // If response shape looks off (empty array where object expected, etc.), flag it
+  if (Array.isArray(data) && data.length === 0) {
+    console.warn(`[API] ⚠️ ${method} ${url} returned empty array — verify shape`);
+  }
+  if (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0) {
+    console.warn(`[API] ⚠️ ${method} ${url} returned empty object — verify shape`);
+  }
+}
+
 // ── Response interceptor — handle 401 with token refresh ─────────────────────
 api.interceptors.response.use(
-  (response: AxiosResponse): AxiosResponse => response,
+  (response: AxiosResponse): AxiosResponse => {
+    logApiResponse(response);
+    return response;
+  },
   async (error: AxiosError<BackendErrorResponse>): Promise<never> => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;

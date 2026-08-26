@@ -45,10 +45,22 @@ export const API_ROUTES = {
     analytics: "/vendor/analytics",
   },
 
-  // Add to src/lib/endpoints.ts under API_ROUTES:
   rider: {
     profile: "/user/rider/profile",
     location: "/user/rider/location",
+    getLocation: "/rider/location",
+    availableDeliveries: "/rider/deliveries/available",
+    assignedDeliveries: "/rider/deliveries/assigned",
+    acceptDelivery: "/rider/deliveries/accept",
+    declineDelivery: (id: string) => `/rider/deliveries/${id}/decline`,
+    updateDeliveryStatus: (id: string) => `/rider/deliveries/${id}/status`,
+    confirmPickup: (id: string) => `/rider/deliveries/${id}/pickup`,
+    confirmDelivery: (id: string) => `/rider/deliveries/${id}/deliver`,
+    reportIssue: (id: string) => `/rider/deliveries/${id}/issue`,
+    earningsHistory: "/rider/earnings",
+    earningsSummary: "/rider/earnings/summary",
+    payouts: "/rider/payouts",
+    requestPayout: "/rider/payouts/request",
   },
 
   // Add to src/lib/endpoints.ts (inside API_ROUTES)
@@ -72,6 +84,12 @@ export const API_ROUTES = {
     approveVendor: (id: string) => `/user/admin/approve-vendor/${id}`,
     pendingRiders: "/user/admin/pending-riders",
     approveRider: (id: string) => `/user/admin/approve-rider/${id}`,
+    // Delivery / Rider management
+    unassignedOrders: "/rider/admin/unassigned-orders",
+    assignedOrders: "/rider/admin/assigned-orders",
+    manualAssign: (id: string) => `/rider/admin/deliveries/${id}/manual-assign`,
+    autoAssign: (id: string) => `/rider/admin/deliveries/${id}/auto-assign`,
+    availableRiders: "/rider/admin/available-riders",
   },
 
   // buyerAddresses: {

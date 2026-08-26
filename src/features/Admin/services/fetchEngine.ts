@@ -2,10 +2,21 @@
 import { api } from "@/lib/api";
 import { API_ROUTES } from "@/lib/endpoints";
 import {
+  AdminAssignedOrder,
+  AdminAssignedRider,
+  AdminAvailableRider,
+  AdminNestedOrder,
+  AdminOrderItem,
+  AdminOrderVendor,
   AdminProfile,
   AdminProfilePayload,
+  AdminUnassignedOrder,
   ApproveRiderPayload,
   ApproveVendorPayload,
+  AssignedOrdersResponse,
+  AutoAssignPayload,
+  ManualAssignPayload,
+  UnassignedOrdersResponse,
   PendingRider,
   PendingVendor,
 } from "../types";
@@ -50,6 +61,67 @@ export const adminFetchEngine = {
 
   approveRider: async (id: string, payload: ApproveRiderPayload): Promise<void> => {
     const response = await api.post(API_ROUTES.admin.approveRider(id), payload);
+    return response.data;
+  },
+
+  // ── Delivery / Rider management ────────────────────────────────────────────
+
+  getUnassignedOrders: async (
+    page = 1,
+    limit = 20,
+  ): Promise<UnassignedOrdersResponse> => {
+    const response = await api.get(API_ROUTES.admin.unassignedOrders, {
+      params: { page, limit },
+    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Unassigned Orders Response:', response.data);
+    }
+    return response.data;
+  },
+
+  getAssignedOrders: async (
+    page = 1,
+    limit = 20,
+    status?: string,
+    riderId?: string,
+  ): Promise<AssignedOrdersResponse> => {
+    const params: Record<string, unknown> = { page, limit };
+    if (status) params.status = status;
+    if (riderId) params.riderId = riderId;
+    const response = await api.get(API_ROUTES.admin.assignedOrders, { params });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Assigned Orders Response:', response.data);
+    }
+    return response.data;
+  },
+
+  manualAssign: async (
+    id: string,
+    payload: ManualAssignPayload,
+  ): Promise<void> => {
+    const response = await api.post(API_ROUTES.admin.manualAssign(id), payload);
+    return response.data;
+  },
+
+  autoAssign: async (
+    id: string,
+    payload: AutoAssignPayload,
+  ): Promise<void> => {
+    const response = await api.post(API_ROUTES.admin.autoAssign(id), payload);
+    return response.data;
+  },
+
+  getAvailableRiders: async (
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+  ): Promise<AdminAvailableRider[]> => {
+    const response = await api.get(API_ROUTES.admin.availableRiders, {
+      params: { latitude, longitude, radiusKm },
+    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Available Riders Response:', response.data);
+    }
     return response.data;
   },
 };

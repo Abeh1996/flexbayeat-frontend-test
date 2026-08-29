@@ -8,7 +8,24 @@ import axios, {
 import Cookies from 'js-cookie';
 import { API_ROUTES } from './endpoints';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://3.250.40.253:5000';
+export const getApiBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://3.250.40.253:5000';
+
+  // If envUrl is HTTPS or relative path, use it directly
+  if (envUrl.startsWith('https://') || envUrl.startsWith('/')) {
+    return envUrl;
+  }
+
+  // If running in browser under HTTPS while target is HTTP, use Next.js rewrite proxy (/api/backend)
+  // to eliminate browser Mixed Content (insecure HTTP blocked on HTTPS page) errors.
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && envUrl.startsWith('http://')) {
+    return '/api/backend';
+  }
+
+  return envUrl;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 interface BackendErrorResponse {
   message?: string;
@@ -57,8 +74,9 @@ async function attemptTokenRefresh(): Promise<string> {
   const refreshToken = Cookies.get('fb_refresh_token');
   if (!refreshToken) throw new Error('No refresh token available');
 
+  const baseUrl = getApiBaseUrl();
   const response = await axios.post<{ access_token: string }>(
-    `${API_BASE_URL}${API_ROUTES.auth.refresh}`,
+    `${baseUrl}${API_ROUTES.auth.refresh}`,
     { refresh_token: refreshToken },
     { headers: { 'Content-Type': 'application/json' } }
   );
